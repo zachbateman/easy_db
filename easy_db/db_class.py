@@ -7,7 +7,7 @@ import os
 import time
 from functools import lru_cache
 from functools import wraps
-import .util
+from . import util
 
 
 
@@ -110,8 +110,10 @@ class DataBase():
         Return list of dicts for rows with column names as keys.
         '''
         sql = f'SELECT * FROM {tablename};'
-        with self.connection(also_cursor=True) as conn, cursor:
-            return util.list_of_dicts_from_query(cursor, sql, tablename)
+        conn, cursor = self.connection(also_cursor=True)
+        data = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
+        conn.close()
+        return data
 
 
     def pull_table_where(self, tablename: str, condition: str) -> list:
@@ -120,8 +122,23 @@ class DataBase():
         Return list of dicts for rows with column names as keys.
         '''
         sql = f'SELECT * FROM {tablename} WHERE {condition};'
-        with self.connection(also_cursor=True) as conn, cursor:
-            return util.list_of_dicts_from_query(cursor, sql, tablename)
+        conn, cursor = self.connection(also_cursor=True)
+        data = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
+        conn.close()
+        return data
+
+
+    def pull_all_table_names(self) -> list:
+        '''
+        Return sorted list of all tables in the database.
+        '''
+        conn, cursor = self.connection(also_cursor=True)
+        if self.db_type == 'SQLITE3':
+            tables = [tup[0] for tup in cursor.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()]
+        else:
+            tables = cursor.tables()
+
+        return sorted(tables)
 
 
 
