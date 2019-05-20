@@ -141,6 +141,60 @@ class DataBase():
         return sorted(tables)
 
 
+    def create_table(self, tablename: str, columns_and_types: dict, force_overwrite: bool=False):
+        '''
+        Create a table in the database with name "tablename"
+
+        Pass in a dictionary containing column names as keys and column types as values.
+        values can be tye actual type (like int, float, etc.) or strings of those same (like 'int', 'float', etc.)
+
+        force_overwrite kwarg allows to overwrite existing table if present
+        (by default will NOT overwrite/change existing table.)
+        '''
+        if tablename in self.pull_all_table_names() and not force_overwrite:
+            print(f'ERROR!  Cannot create table {tablename} as it already exists!')
+            print('Please choose a different name or use force_overwrite=True to overwrite.')
+
+        conn, cursor = self.connection(also_cursor=True)
+
+        if self.db_type == 'ACCESS':
+            type_map = {float: 'double',
+                                 'float': 'double',
+                                 'double': 'double',
+                                 int: 'integer',
+                                 'int': 'integer',
+                                 'integer': 'integer',
+                                 str: 'CHAR',
+                                 'str': 'CHAR',
+                                 'text': 'CHAR',
+                                }
+            column_types = ', '.join([f'k {type_map[v]}' for k, v in columns_and_types])
+            sql = f"CREATE TABLE {tablename}({column_types});"
+        elif self.db_type == 'SQLITE3':
+            type_map = {float: 'REAL',
+                                 'float': 'REAL',
+                                 'double': 'REAL',
+                                 'real': 'REAL',
+                                 int: 'INTEGER',
+                                 'int': 'INTEGER',
+                                 'integer': 'INTEGER',
+                                 str: 'TEXT',
+                                 'str': 'TEXT',
+                                 'text': 'TEXT',
+                                }
+            column_types = ', '.join([f'k {type_map[v]}' for k, v in columns_and_types])
+            sql = f"CREATE TABLE {tablename}({column_types});"
+        else:
+            print('ERROR!  Table creation only implemented in SQLite and Access currently.')
+            return
+
+
+        cursor.execute(sql)
+        conn.commit()
+        conn.close()
+        print(f'Table {tablename} successfully created!')
+
+
 
     def __repr__(self) -> str:
         return f'DataBase: {self.db_location_str}'
