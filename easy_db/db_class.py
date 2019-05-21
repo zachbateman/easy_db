@@ -43,15 +43,20 @@ class DataBase():
             return 'Database not recognized!'
 
 
-    def connection_sqlite(self, also_cursor: bool=False):
+    def connection_sqlite(self, also_cursor: bool=False, create_if_none: bool=False):
         '''
         Return a connection object to the Sqlite3 Database.
         '''
-        conn = sqlite3.connect(self.db_location_str)
-        if also_cursor:
-            return conn, conn.cursor()
+        db_file_exists = True if os.path.isfile(self.db_location_str) else False
+        if db_file_exists or create_if_none:
+            conn = sqlite3.connect(self.db_location_str)
+            if also_cursor:
+                return conn, conn.cursor()
+            else:
+                return conn
         else:
-            return conn
+            print(f'The file {self.db_location_str} does not exist.')
+            print('Please first create this database or specify create_if_none=True.')
 
 
     def connection_access(self, also_cursor: bool=False):
