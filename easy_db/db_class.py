@@ -78,29 +78,45 @@ class DataBase():
             return conn
 
 
-    def provide_db_connection(func, also_cursor=False):
+    def provide_db_connection(self, also_cursor=False):
         '''
         Decorator provides db connection (and cursor if requested) for database.
         To be used to decorate functions that would like to manipulate conn/cursor directly.
+
+        Connection commit and closing is handled at the end of this decorator method!
         '''
-        @wraps(func)  # allows for decorated func's docstring to come through decorator
-        def inner(*args, **kwargs):
-            if also_cursor:
-                conn, cursor = self.connect(also_cursor=True)
-                cursor.arraysize = 50  # attempt to speed up cursor.fetchall() calls... not sure of impact
-                returned = func(conn, cursor, *args, **kwargs)
-            else:
-                conn = self.connect()
-                returned = func(conn, *args, **kwargs)
-            try:
-                conn.commit()
-            except:
-                time.sleep(0.1)  # if database is locked
-                conn.commit()
-            finally:
-                conn.close()
-            return returned
-        return inner
+        def decorator(func):  # need extra layer of scope to handle the also_cursor kwarg passed in user code...
+            @wraps(func)  # allows for decorated function's doctstring to come through decorator
+            def inner(*args, **kwargs):
+                conn = None
+                counter = 0
+                while conn is None:
+                    try:
+                        if also_cursor:
+                            conn, cursor = self.connection(also_cursor=True)
+                            cursor.arraysize = 50  # attempt to speed up cursor.fetchall() calls... not sure of impact
+                        else:
+                            conn = self.connection()
+                    except (pyodbc.Error, sqlite3.OperationalError) as error:  # in case database is locked from another connection
+                        time.sleep(0.01)
+                        counter += 1
+                        if counter > 1000:
+                            print(f'ERROR!  Could not access {self.db_location_str}')
+                            print('Database is locked from another connection!')
+                            break
+
+                returned = func(conn, cursor, *args, **kwargs) if also_cursor else func(conn, *args, **kwargs)
+
+                try:
+                    conn.commit()
+                except:  # if database is locked
+                    time.sleep(0.1)
+                    conn.commit()
+                finally:
+                    conn.close()
+                return returned
+            return inner
+        return decorator
 
 
     @lru_cache(maxsize=4)
