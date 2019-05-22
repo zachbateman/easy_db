@@ -2,6 +2,7 @@
 Utility functions for easy_db.
 '''
 import os
+import sqlite3
 
 
 
@@ -25,12 +26,17 @@ def check_if_file_is_sqlite(filename: str) -> bool:
         return False
 
 
-def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str) -> list:
+def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str, parameters: list=[]) -> list:
     '''
     Query db using cursor, supplied sql, and tablename.
     Return list of dicts for query result.
     '''
-    data = cursor.execute(sql).fetchall()
+    try:
+        data = cursor.execute(sql, parameters).fetchall()
+    except (sqlite3.OperationalError) as error:
+        print(f'ERROR querying table {tablename}!  It may not exist.')
+        return
+
     if db_type == 'SQLITE3':
         columns = [description[0] for description in cursor.description]
     else:
