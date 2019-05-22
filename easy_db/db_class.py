@@ -7,6 +7,8 @@ import os
 import time
 from functools import lru_cache
 from functools import wraps
+import tqdm
+import easy_multip
 from . import util
 
 
@@ -149,6 +151,19 @@ class DataBase():
         return data
 
 
+    def pull_table_where_id_in_list(self, tablename: str, id_col: str, match_values: list, use_multip: bool=True) -> list:
+        '''
+        Pulls all data from table where id_col value is in the provided match_values_to_use.
+        Can use multiprocessing if use_multip specifed as True.
+        '''
+        if use_multip and len(match_values) >= 100:
+            return _pull_table_using_id_list_multip(*self.connection(also_cursor=True), id_col, match_values, self.db_type)
+        else:
+            if len(match_values) < 100:
+                print('Less than 100 match_values given to pull_table_using_id_list.  Using single process.')
+            return _pull_table_using_id_list(*self.connection(also_cursor=True), id_col, match_values, self.db_type)
+
+
     def pull_all_table_names(self) -> list:
         '''
         Return sorted list of all tables in the database.
@@ -216,6 +231,26 @@ class DataBase():
         print(f'Table {tablename} successfully created!')
 
 
-
     def __repr__(self) -> str:
         return f'DataBase: {self.db_location_str}'
+
+
+
+def _pull_table_using_id_list(conn, cursor, id_col: str, match_values_to_use: list, db_type: str) -> list:
+    '''
+    Pulls all data from table where id_col value is in the provided match_values_to_use.
+    Separate function here so easy_multip can be used if desired.
+    '''
+    conn, cursor = self.connection(also_cursor=True)
+    data: list = []
+    pbar = tqdm.tqdm(total=len(match_values_to_use))
+    while len(match_values_to_use) > 0:
+        subset = match_values_to_use[:25]
+        sql = f"SELECT * FROM {tablename} WHERE {id_col} in ({'?,'.join(['' for _ in range(len(subset))])}?);"
+        data.extend(util.list_of_dicts_from_query(cursor, sql, db_type))
+        match_values_to_use = match_values_to_use[25:]
+        pbar.update(25)
+    pbar.update(len(match_values_to_use) % 25)
+    conn.close()
+    return data
+_pull_table_using_id_list_multip = easy_multip.decorators.use_multip(_pull_table_using_id_list)  # decorate with multiprocessing
