@@ -156,12 +156,15 @@ class DataBase():
         Pulls all data from table where id_col value is in the provided match_values_to_use.
         Can use multiprocessing if use_multip specifed as True.
         '''
-        if use_multip and len(match_values) >= 100:
-            return _pull_table_using_id_list_multip(*self.connection(also_cursor=True), id_col, match_values, self.db_type)
-        else:
-            if len(match_values) < 100:
-                print('Less than 100 match_values given to pull_table_using_id_list.  Using single process.')
-            return _pull_table_using_id_list(*self.connection(also_cursor=True), id_col, match_values, self.db_type)
+        # if use_multip and len(match_values) >= 100:
+            # return _pull_table_using_id_list_multip(match_values, *self.connection(also_cursor=True), tablename, id_col, self.db_type)
+        # else:
+            # if len(match_values) < 100:
+                # print('Less than 100 match_values given to pull_table_using_id_list.  Using single process.')
+            # return _pull_table_using_id_list(match_values, *self.connection(also_cursor=True), tablename, id_col, self.db_type)
+        if use_multip:
+            print('use_multip not yet working in pull_table_where_id_in_list().  Using single process.')
+        return _pull_table_using_id_list(match_values, *self.connection(also_cursor=True), tablename, id_col, self.db_type)
 
 
     def pull_all_table_names(self) -> list:
@@ -175,6 +178,22 @@ class DataBase():
             tables = cursor.tables()
 
         return sorted(tables)
+
+
+    def table_columns_and_types(self, tablename: str) -> dict:
+        '''
+        Return dict of all column: type pairs in specified table.
+        '''
+        sql = f'SELECT * FROM {tablename} LIMIT 2;'
+        conn, cursor = self.connection(also_cursor=True)
+        data = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
+        conn.close()
+        if len(data) == 0:
+            print(f'No rows in {tablename}.  Please determine columns and types with another method.')
+            return None
+        else:
+            columns_and_types = {key: type(value).__name__ for key, value in data[0]}
+            return columns_and_types
 
 
     def create_table(self, tablename: str, columns_and_types: dict, force_overwrite: bool=False):
@@ -195,30 +214,34 @@ class DataBase():
 
         if self.db_type == 'ACCESS':
             type_map = {float: 'double',
-                                 'float': 'double',
-                                 'double': 'double',
-                                 int: 'integer',
-                                 'int': 'integer',
-                                 'integer': 'integer',
-                                 str: 'CHAR',
-                                 'str': 'CHAR',
-                                 'text': 'CHAR',
-                                }
-            column_types = ', '.join([f'k {type_map[v]}' for k, v in columns_and_types])
+                        'float': 'double',
+                        'double': 'double',
+                        'float64': 'double',
+                        'numpy.float64': 'double',
+                        int: 'integer',
+                        'int': 'integer',
+                        'integer': 'integer',
+                        str: 'CHAR',
+                        'str': 'CHAR',
+                        'text': 'CHAR',
+                        }
+            column_types = ', '.join([f'{k} {type_map[v]}' for k, v in columns_and_types])
             sql = f"CREATE TABLE {tablename}({column_types});"
         elif self.db_type == 'SQLITE3':
             type_map = {float: 'REAL',
-                                 'float': 'REAL',
-                                 'double': 'REAL',
-                                 'real': 'REAL',
-                                 int: 'INTEGER',
-                                 'int': 'INTEGER',
-                                 'integer': 'INTEGER',
-                                 str: 'TEXT',
-                                 'str': 'TEXT',
-                                 'text': 'TEXT',
-                                }
-            column_types = ', '.join([f'k {type_map[v]}' for k, v in columns_and_types])
+                        'float': 'REAL',
+                        'double': 'REAL',
+                        'real': 'REAL',
+                        'float64': 'REAL',
+                        'numpy.float64': 'REAL',
+                        int: 'INTEGER',
+                        'int': 'INTEGER',
+                        'integer': 'INTEGER',
+                        str: 'TEXT',
+                        'str': 'TEXT',
+                        'text': 'TEXT',
+                        }
+            column_types = ', '.join([f'{k} {type_map[v]}' for k, v in columns_and_types.items()])
             sql = f"CREATE TABLE {tablename}({column_types});"
         else:
             print('ERROR!  Table creation only implemented in SQLite and Access currently.')
@@ -231,26 +254,53 @@ class DataBase():
         print(f'Table {tablename} successfully created!')
 
 
+    def append_to_table(self, tablename: str, data: list, create_table_if_needed: bool=True):
+        '''
+        Append rows of data to database table.
+        Create the table in the database if it doesn't exist if create_table_if_needed is True
+
+        "data" arg is list of row dicts where each row dict contains all columns as keys.
+        '''
+        if tablename not in self.pull_all_table_names():
+            if create_table_if_needed:
+                columns_and_types = {key: type(value).__name__ for key, value in data[0].items()}
+                self.create_table(tablename, columns_and_types)
+                columns = [col for col in columns_and_types]
+            else:
+                print(f'ERROR!  Table {tablename} does not exist in database!')
+                print('Use create_table_if_needed=True if you would like to create it.')
+                return None
+        else:
+            columns = [col for col in self.table_columns_and_types(tablename)]
+
+        sql = f"INSERT INTO {tablename} ({', '.join([k for k in columns])}) VALUES ({', '.join(['?' for _ in range(len(columns))])});"
+        data_to_insert = [tuple(row_dict[col] for col in columns) for row_dict in data]
+        conn, cursor = self.connection(also_cursor=True)
+        cursor.executemany(sql, data_to_insert)
+        conn.commit()
+        conn.close()
+        print(f'Data inserted in {tablename}.  ({"{:,.0f}".format(len(data))} rows)')
+
+
     def __repr__(self) -> str:
         return f'DataBase: {self.db_location_str}'
 
 
 
-def _pull_table_using_id_list(conn, cursor, id_col: str, match_values_to_use: list, db_type: str) -> list:
+def _pull_table_using_id_list(match_values_to_use: list, conn, cursor, tablename: str, id_col: str, db_type: str) -> list:
     '''
     Pulls all data from table where id_col value is in the provided match_values_to_use.
     Separate function here so easy_multip can be used if desired.
     '''
-    conn, cursor = self.connection(also_cursor=True)
     data: list = []
     pbar = tqdm.tqdm(total=len(match_values_to_use))
     while len(match_values_to_use) > 0:
         subset = match_values_to_use[:25]
         sql = f"SELECT * FROM {tablename} WHERE {id_col} in ({'?,'.join(['' for _ in range(len(subset))])}?);"
-        data.extend(util.list_of_dicts_from_query(cursor, sql, db_type))
+        data.extend(util.list_of_dicts_from_query(cursor, sql, tablename, db_type, subset))
         match_values_to_use = match_values_to_use[25:]
         pbar.update(25)
     pbar.update(len(match_values_to_use) % 25)
     conn.close()
     return data
-_pull_table_using_id_list_multip = easy_multip.decorators.use_multip(_pull_table_using_id_list)  # decorate with multiprocessing
+# _pull_table_using_id_list_multip = easy_multip.decorators.use_multip(_pull_table_using_id_list)  # decorate with multiprocessing
