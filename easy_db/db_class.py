@@ -19,17 +19,17 @@ class DataBase():
     def __init__(self, db_location_str: str='') -> None:
         self.db_location_str = db_location_str
 
-        self.db_type = self.find_db_type()
+        self.db_type = self._find_db_type()
         if self.db_type == 'ACCESS':
-            self.connection = self.connection_access
+            self.connection = self._connection_access
         elif self.db_type == 'SQL SERVER':
-            self.connection = self.connection_sql_server
+            self.connection = self._connection_sql_server
         elif self.db_type == 'SQLITE3':
-            self.connection = self.connection_sqlite
+            self.connection = self._connection_sqlite
 
 
 
-    def find_db_type(self):
+    def _find_db_type(self):
         '''
         Figure out what kind of databse is being used.
         '''
@@ -43,7 +43,7 @@ class DataBase():
             return 'Database not recognized!'
 
 
-    def connection_sqlite(self, also_cursor: bool=False, create_if_none: bool=False):
+    def _connection_sqlite(self, also_cursor: bool=False, create_if_none: bool=False):
         '''
         Return a connection object to the Sqlite3 Database.
         '''
@@ -59,7 +59,7 @@ class DataBase():
             print('Please first create this database or specify create_if_none=True.')
 
 
-    def connection_access(self, also_cursor: bool=False):
+    def _connection_access(self, also_cursor: bool=False):
         '''
         Return a connection object to the Access Database.
         '''
@@ -72,7 +72,7 @@ class DataBase():
             return conn
 
 
-    def connection_sql_server(self, also_cursor: bool=False):
+    def _connection_sql_server(self, also_cursor: bool=False):
         '''
         Return a connection object to the SQL Server Database.
         '''
@@ -85,8 +85,8 @@ class DataBase():
 
     def provide_db_connection(self, also_cursor=False):
         '''
-        Decorator provides db connection (and cursor if requested) for database.
-        To be used to decorate functions that would like to manipulate conn/cursor directly.
+        DECORATOR provides db connection (and cursor if requested) for database as first arg(s).
+        Used to decorate functions that would like to manipulate conn and/or cursor directly.
 
         Connection commit and closing is handled at the end of this decorator method!
         '''
