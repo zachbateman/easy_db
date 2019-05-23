@@ -16,7 +16,6 @@ from . import util
 
 class DataBase():
 
-
     def __init__(self, db_location_str: str='') -> None:
         self.db_location_str = db_location_str
 
@@ -34,7 +33,6 @@ class DataBase():
         '''
         Figure out what kind of databse is being used.
         '''
-
         if '.accdb' in self.db_location_str or '.mdb' in self.db_location_str:
             return 'ACCESS'
         elif 'DSN' in self.db_location_str:
@@ -292,11 +290,15 @@ def _pull_table_using_id_list(match_values_to_use: list, conn, cursor, tablename
     Pulls all data from table where id_col value is in the provided match_values_to_use.
     Separate function here so easy_multip can be used if desired.
     '''
+    @lru_cache(maxsize=4)
+    def sql_str(subset_len: int) -> str:
+        return f"SELECT * FROM {tablename} WHERE {id_col} in ({'?,'.join(['' for _ in range(subset_len)])}?);"
+
     data: list = []
     pbar = tqdm.tqdm(total=len(match_values_to_use))
     while len(match_values_to_use) > 0:
         subset = match_values_to_use[:25]
-        sql = f"SELECT * FROM {tablename} WHERE {id_col} in ({'?,'.join(['' for _ in range(len(subset))])}?);"
+        sql = sql_str(len(subset))
         data.extend(util.list_of_dicts_from_query(cursor, sql, tablename, db_type, subset))
         match_values_to_use = match_values_to_use[25:]
         pbar.update(25)
