@@ -17,7 +17,7 @@ class TestSQLite(unittest.TestCase):
     def test_tablename_pull(self):
         tables = self.database.pull_all_table_names()
         print(tables)
-        self.assertTrue(len(tables) == 2)
+        self.assertTrue(len(tables) == 3)
         self.assertTrue(tables == sorted(tables))
 
     def test_full_table_pull(self):
@@ -27,7 +27,12 @@ class TestSQLite(unittest.TestCase):
         self.assertTrue(type(test_table_data[0]) == dict)
         self.assertTrue(len(test_table_data) == 31)
 
+    def test_pull_where_id_in_list(self):
+        test_pulled_data = self.database.pull_table_where_id_in_list('THIRD_TABLE', 'parameter', [0.66, 0.67], use_multip=False)
+        self.assertTrue(len(test_pulled_data) == 116)
+        self.assertTrue(all(d['parameter'] in [0.66, 0.67] for d in test_pulled_data))
+
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(buffer=True)
