@@ -33,9 +33,9 @@ class DataBase():
         '''
         Figure out what kind of databse is being used.
         '''
-        if '.accdb' in self.db_location_str or '.mdb' in self.db_location_str:
+        if '.accdb' in self.db_location_str.lower() or '.mdb' in self.db_location_str.lower():
             return 'ACCESS'
-        elif 'DSN' in self.db_location_str:
+        elif 'dsn' in self.db_location_str.lower():
             return 'SQL SERVER'
         elif util.check_if_file_is_sqlite(self.db_location_str):
             return 'SQLITE3'
