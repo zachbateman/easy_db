@@ -5,3 +5,4 @@ _Archive/
 build/
 dist/
 MANIFEST
+easy_db.egg-info/
