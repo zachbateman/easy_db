@@ -3,6 +3,7 @@ Utility functions for easy_db.
 '''
 import os
 import sqlite3
+from typing import List, Dict, Any
 
 
 
@@ -26,7 +27,7 @@ def check_if_file_is_sqlite(filename: str) -> bool:
         return False
 
 
-def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str, parameters: list=[]) -> list:
+def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str, parameters: list=[]) -> List[Dict[str, Any]]:
     '''
     Query db using cursor, supplied sql, and tablename.
     Return list of dicts for query result.
