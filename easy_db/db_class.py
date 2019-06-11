@@ -124,6 +124,22 @@ class DataBase():
         return decorator
 
 
+    def compact_db(self) -> None:
+        '''
+        Use "VACUUM" command to defragment and shrink sqlite3 database.
+        This can have a big impact after deleting many tables.
+        Previous sqlite3 bug requiring connection kwarg
+        isolation_level=None appears to be fixed.
+        '''
+        if self.db_type == 'SQLITE3':
+            conn = self.connection()
+            conn.execute('VACUUM')
+            conn.close()
+        else:
+            print(f'compact_db() only implemented for SQLite3.')
+            print(f'Current database is: {self.db_type}')
+
+
     @lru_cache(maxsize=4)
     def pull_full_table(self, tablename: str) -> list:
         '''
