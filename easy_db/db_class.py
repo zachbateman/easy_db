@@ -181,9 +181,10 @@ class DataBase():
         return _pull_table_using_id_list(match_values, *self.connection(also_cursor=True), tablename, id_col, self.db_type)
 
 
-    def pull_all_table_names(self) -> list:
+    def pull_all_table_names(self, sorted_list=True) -> list:
         '''
-        Return sorted list of all tables in the database.
+        Return list of all tables in the database.
+        list is sorted by default
         '''
         conn, cursor = self.connection(also_cursor=True)
         if self.db_type == 'SQLITE3':
@@ -191,7 +192,10 @@ class DataBase():
         else:
             tables = cursor.tables()
 
-        return sorted(tables)
+        if sorted_list:
+            return sorted(tables)
+        else:
+            return tables
 
 
     def table_columns_and_types(self, tablename: str) -> dict:
