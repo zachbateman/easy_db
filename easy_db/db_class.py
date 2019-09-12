@@ -63,6 +63,15 @@ class DataBase():
         '''
         Return a connection object to the Access Database.
         '''
+        if not os.path.isfile(self.db_location_str):
+            if '.accdb' in self.db_location_str and os.path.isfile(self.db_location_str.replace('.accdb', '.mdb')):
+                error_str = '\n  ".accdb" file extension specified, but this file was not found.\n  A ".mdb" Access file was found instead.\n  Please change the specified file extension to use the existing database.\n'
+            elif '.mdb' in self.db_location_str and os.path.isfile(self.db_location_str.replace('.mdb', '.accdb')):
+                error_str = '\n  ".mdb" file extension specified, but this file was not found.\n  An ".accdb" Access file was found instead.\n  Please change the specified file extension to use the existing database.\n'
+            else:
+                error_str = '\n  Could not locate the specified Access database.\n'
+            raise FileNotFoundError(error_str)
+
         conn = pyodbc.connect(
         r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};" +
         r'Dbq=' + self.db_location_str + ';')
