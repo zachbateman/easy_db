@@ -150,12 +150,19 @@ class DataBase():
 
 
     @lru_cache(maxsize=4)
-    def pull_full_table(self, tablename: str) -> list:
+    def pull_full_table(self, tablename: str, columns='all') -> list:
         '''
         SELECT * Query for full table as specified from tablename.
+
+        Alternatively, pass tuple of column names to "columns" kwarg
+        to pull the full table for ONLY those columns.
+
         Return list of dicts for rows with column names as keys.
         '''
-        sql = f'SELECT * FROM {tablename};'
+        if columns == 'all':
+            sql = f'SELECT * FROM {tablename};'
+        else:
+            sql = f'SELECT {", ".join(columns)} FROM {tablename};'
         conn, cursor = self.connection(also_cursor=True)
         data = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
         conn.close()
