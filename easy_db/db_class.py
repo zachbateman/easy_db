@@ -226,8 +226,7 @@ class DataBase():
             print(f'No rows in {tablename}.  Please determine columns and types with another method.')
             return None
         else:
-            columns_and_types = {key: type(value).__name__ for key, value in data[0]}
-            return columns_and_types
+            return {key: type(value).__name__ for key, value in data[0].items()}
 
 
     def create_table(self, tablename: str, columns_and_types: dict, force_overwrite: bool=False):
@@ -301,7 +300,7 @@ class DataBase():
                 self.create_table(tablename, columns_and_types)
                 columns = [col for col in columns_and_types]
             else:
-                print(f'ERROR!  Table {tablename} does not exist in database!')
+                print(f'ERROR!  Table "{tablename}" does not exist in database!')
                 print('Use create_table_if_needed=True if you would like to create it.')
                 return None
         else:
@@ -313,7 +312,7 @@ class DataBase():
         cursor.executemany(sql, data_to_insert)
         conn.commit()
         conn.close()
-        print(f'Data inserted in {tablename}.  ({"{:,.0f}".format(len(data))} rows)')
+        print(f'Data inserted in "{tablename}" -> {"{:,.0f}".format(len(data))} rows')
 
 
     def __repr__(self) -> str:
