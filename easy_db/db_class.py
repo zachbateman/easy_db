@@ -181,20 +181,20 @@ class DataBase():
         return data
 
 
-    def pull_table_where_id_in_list(self, tablename: str, id_col: str, match_values: list, use_multip: bool=True) -> list:
+    def pull_table_where_id_in_list(self, tablename: str, id_col: str, match_values: list, use_multip: bool=True, progressbar: bool=True) -> list:
         '''
         Pulls all data from table where id_col value is in the provided match_values_to_use.
-        Can use multiprocessing if use_multip specifed as True.
+        Can use multiprocessing if use_multip specified as True.
         '''
-        # if use_multip and len(match_values) >= 100:
+        # if use_multip and len(match_values) >= 500:
             # return _pull_table_using_id_list_multip(match_values, *self.connection(also_cursor=True), tablename, id_col, self.db_type)
         # else:
-            # if len(match_values) < 100:
-                # print('Less than 100 match_values given to pull_table_using_id_list.  Using single process.')
+            # if len(match_values) < 500:
+                # print('Less than 500 match_values given to pull_table_using_id_list.  Using single process.')
             # return _pull_table_using_id_list(match_values, *self.connection(also_cursor=True), tablename, id_col, self.db_type)
         if use_multip:
             print('use_multip not yet working in pull_table_where_id_in_list().  Using single process.')
-        return _pull_table_using_id_list(match_values, *self.connection(also_cursor=True), tablename, id_col, self.db_type)
+        return _pull_table_using_id_list(match_values, *self.connection(also_cursor=True), tablename, id_col, self.db_type, progressbar=progressbar)
 
 
     def pull_all_table_names(self, sorted_list=True) -> list:
@@ -321,24 +321,27 @@ class DataBase():
 
 
 
-def _pull_table_using_id_list(match_values_to_use: list, conn, cursor, tablename: str, id_col: str, db_type: str) -> list:
+def _pull_table_using_id_list(match_values_to_use: list, conn, cursor, tablename: str, id_col: str, db_type: str, progressbar: bool=True) -> list:
     '''
     Pulls all data from table where id_col value is in the provided match_values_to_use.
     Separate function here so easy_multip can be used if desired.
     '''
     @lru_cache(maxsize=4)
     def sql_str(subset_len: int) -> str:
-        return f"SELECT * FROM {tablename} WHERE {id_col} in ({'?,'.join(['' for _ in range(subset_len)])}?);"
+        return f"SELECT * FROM [{tablename}] WHERE {id_col} in ({'?,'.join(['' for _ in range(subset_len)])}?);"
 
     data: list = []
-    pbar = tqdm.tqdm(total=len(match_values_to_use))
+    if progressbar:
+        pbar = tqdm.tqdm(total=len(match_values_to_use))
     while len(match_values_to_use) > 0:
-        subset = match_values_to_use[:25]
+        subset = match_values_to_use[:100]
         sql = sql_str(len(subset))
         data.extend(util.list_of_dicts_from_query(cursor, sql, tablename, db_type, subset))
-        match_values_to_use = match_values_to_use[25:]
-        pbar.update(25)
-    pbar.update(len(match_values_to_use) % 25)
+        match_values_to_use = match_values_to_use[100:]
+        if progressbar:
+            pbar.update(100)
+    if progressbar:
+        pbar.update(len(match_values_to_use) % 100)
     conn.close()
     return data
 # _pull_table_using_id_list_multip = easy_multip.decorators.use_multip(_pull_table_using_id_list)  # decorate with multiprocessing
