@@ -35,7 +35,8 @@ def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str, par
     try:
         data = cursor.execute(sql, parameters).fetchall()
     except (sqlite3.OperationalError) as error:
-        print(f'ERROR querying table {tablename}!  It may not exist.')
+        print(f'ERROR querying table {tablename}!  Error below:')
+        print(error)
         return
 
     if db_type == 'SQLITE3':
