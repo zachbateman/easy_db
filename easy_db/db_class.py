@@ -286,6 +286,7 @@ class DataBase():
                         'str': 'TEXT',
                         'text': 'TEXT',
                         'varchar': 'TEXT',
+                        'datetime': 'DATE',
                         }
             column_types = ', '.join([f'{k} {type_map[v]}' for k, v in columns_and_types.items()])
             sql = f"CREATE TABLE '{tablename}'({column_types});"
