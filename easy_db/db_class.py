@@ -220,10 +220,15 @@ class DataBase():
         '''
         if self.db_type == 'ACCESS':
             conn, cursor = self.connection(also_cursor=True)
-            return {col[3]: col[5].lower() for col in cursor.columns(table=tablename)}
+            try:
+                return {col[3]: col[5].lower() for col in cursor.columns(table=tablename)}
+            except UnicodeDecodeError:
+                print('\nERROR - Unable to read columns.')
+                print('This may occur if using Access database with column descriptions populated.')
+                print('Try deleting the column descriptions.\n')
         elif self.db_type == 'SQLITE3':
             conn, cursor = self.connection(also_cursor=True)
-            return {col[1]: col[2].lower() for col in cursor.execute(f'PRAGMA TABLE_INFO({tablename});').fetchall()}
+            return {col[1]: col[2].lower() for col in cursor.execute(f"PRAGMA TABLE_INFO('{tablename}');").fetchall()}
         else:
             sql = f'SELECT * FROM {tablename} LIMIT 2;'
             conn, cursor = self.connection(also_cursor=True)
@@ -328,7 +333,7 @@ class DataBase():
         else:
             columns = [col for col in self.table_columns_and_types(tablename)]
 
-        sql = f"INSERT INTO {tablename} ({', '.join([k for k in columns])}) VALUES ({', '.join(['?' for _ in range(len(columns))])});"
+        sql = f"INSERT INTO '{tablename}' ({', '.join([k for k in columns])}) VALUES ({', '.join(['?' for _ in range(len(columns))])});"
         data_to_insert = [tuple(row_dict[col] for col in columns) for row_dict in data]
         conn, cursor = self.connection(also_cursor=True)
         cursor.executemany(sql, data_to_insert)
