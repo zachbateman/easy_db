@@ -287,6 +287,20 @@ class DataBase():
         print(f'Table {tablename} successfully created!')
 
 
+    def drop_table(self, tablename: str):
+        '''
+        Drop/delete the specified table from the database.
+        '''
+        if self.db_type == 'SQLITE3':
+            conn, cursor = self.connection(also_cursor=True)
+            cursor.execute(f'DROP TABLE IF EXISTS "{tablename}";')
+            conn.commit()
+            conn.close()
+            print(f'Table {tablename} deleted.')
+        else:
+            print('ERROR!  Table deletion only implemented in SQLite currently.')
+
+
     def append_to_table(self, tablename: str, data: list, create_table_if_needed: bool=True):
         '''
         Append rows of data to database table.
