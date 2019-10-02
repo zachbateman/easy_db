@@ -2,7 +2,7 @@
 Utility functions for easy_db.
 '''
 import os
-import sqlite3
+import sqlite3, pyodbc
 from typing import List, Dict, Any
 
 
@@ -34,7 +34,7 @@ def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str, par
     '''
     try:
         data = cursor.execute(sql, parameters).fetchall()
-    except (sqlite3.OperationalError) as error:
+    except (sqlite3.OperationalError, pyodbc.ProgrammingError) as error:
         print(f'ERROR querying table {tablename}!  Error below:')
         print(error)
         return

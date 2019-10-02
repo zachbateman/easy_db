@@ -218,15 +218,22 @@ class DataBase():
         '''
         Return dict of all column: type pairs in specified table.
         '''
-        sql = f'SELECT * FROM {tablename} LIMIT 2;'
-        conn, cursor = self.connection(also_cursor=True)
-        data = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
-        conn.close()
-        if len(data) == 0:
-            print(f'No rows in {tablename}.  Please determine columns and types with another method.')
-            return None
+        if self.db_type == 'ACCESS':
+            conn, cursor = self.connection(also_cursor=True)
+            return {col[3]: col[5].lower() for col in cursor.columns(table=tablename)}
+        elif self.db_type == 'SQLITE3':
+            conn, cursor = self.connection(also_cursor=True)
+            return {col[1]: col[2].lower() for col in cursor.execute(f'PRAGMA TABLE_INFO({tablename});').fetchall()}
         else:
-            return {key: type(value).__name__ for key, value in data[0].items()}
+            sql = f'SELECT * FROM {tablename} LIMIT 2;'
+            conn, cursor = self.connection(also_cursor=True)
+            data = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
+            conn.close()
+            if len(data) == 0:
+                print(f'No rows in {tablename}.  Please determine columns and types with another method.')
+                return None
+            else:
+                return {key: type(value).__name__ for key, value in data[0].items()}
 
 
     def create_table(self, tablename: str, columns_and_types: dict, force_overwrite: bool=False):
@@ -273,6 +280,7 @@ class DataBase():
                         str: 'TEXT',
                         'str': 'TEXT',
                         'text': 'TEXT',
+                        'varchar': 'TEXT',
                         }
             column_types = ', '.join([f'{k} {type_map[v]}' for k, v in columns_and_types.items()])
             sql = f"CREATE TABLE {tablename}({column_types});"
