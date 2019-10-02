@@ -283,7 +283,7 @@ class DataBase():
                         'varchar': 'TEXT',
                         }
             column_types = ', '.join([f'{k} {type_map[v]}' for k, v in columns_and_types.items()])
-            sql = f"CREATE TABLE {tablename}({column_types});"
+            sql = f"CREATE TABLE '{tablename}'({column_types});"
         else:
             print('ERROR!  Table creation only implemented in SQLite and Access currently.')
             return
