@@ -150,23 +150,32 @@ class DataBase():
 
 
     @lru_cache(maxsize=4)
-    def pull_full_table(self, tablename: str, columns='all') -> list:
+    def pull_full_table(self, tablename: str, columns='all', clear_cache=False) -> list:
         '''
         SELECT * Query for full table as specified from tablename.
 
         Alternatively, pass tuple of column names to "columns" kwarg
         to pull the full table for ONLY those columns.
 
+        NOTE!  This function uses caching to avoid extra queries for the same data.
+        clear_cache kwarg provides ability to clear cache and pull data
+        with a fresh query.  Set clear_cache=True in the event that the database
+        table may have been updated since any previous calls.
+
         Return list of dicts for rows with column names as keys.
         '''
-        if columns == 'all':
-            sql = f'SELECT * FROM {tablename};'
+        if clear_cache:
+            self.pull_full_table.cache_clear()
+            return self.pull_full_table(tablename, columns)
         else:
-            sql = f'SELECT {", ".join(columns)} FROM {tablename};'
-        conn, cursor = self.connection(also_cursor=True)
-        data = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
-        conn.close()
-        return data
+            if columns == 'all':
+                sql = f'SELECT * FROM {tablename};'
+            else:
+                sql = f'SELECT {", ".join(columns)} FROM {tablename};'
+            conn, cursor = self.connection(also_cursor=True)
+            data = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
+            conn.close()
+            return data
 
 
     def pull_table_where(self, tablename: str, condition: str) -> list:
