@@ -1,1 +1,1 @@
-from .db_class import DataBase
+from .database import DataBase
