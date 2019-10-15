@@ -347,10 +347,24 @@ class DataBase():
         sql = f"INSERT INTO '{tablename}' ({', '.join([k for k in columns])}) VALUES ({', '.join(['?' for _ in range(len(columns))])});"
         data_to_insert = [tuple(row_dict[col] for col in columns) for row_dict in data]
         conn, cursor = self.connection(also_cursor=True)
-        cursor.executemany(sql, data_to_insert)
+
+        # Following loop repeatedly attempts to append data to table if sqlite
+        # db is locked from another transaction (will try for 10 seconds)
+        t0, upload_complete = time.time(), False
+        while time.time() - t0 < 10:
+            try:
+                cursor.executemany(sql, data_to_insert)
+                upload_complete = True
+                break
+            except sqlite3.OperationalError:  # database is locked
+                pass
+
         conn.commit()
         conn.close()
-        print(f'Data inserted in "{tablename}" -> {"{:,.0f}".format(len(data))} rows')
+        if upload_complete:
+            print(f'Data inserted in "{tablename}" -> {"{:,.0f}".format(len(data))} rows')
+        else:
+            print(f'ERROR!  Unable to append data to "{tablename}".\n  -> Is the database locked?')
 
 
     def copy_table(self, other_easydb, tablename: str, column_case: str='same'):
