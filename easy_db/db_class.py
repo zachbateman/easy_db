@@ -353,7 +353,7 @@ class DataBase():
         print(f'Data inserted in "{tablename}" -> {"{:,.0f}".format(len(data))} rows')
 
 
-    def copy_table(self, other_easydb: DataBase, tablename: str, column_case: str='same'):
+    def copy_table(self, other_easydb, tablename: str, column_case: str='same'):
         '''
         Copy specified table from other easy_db.DataBase to this DB.
         If desired, column names can be set to be all upper or lower-case
