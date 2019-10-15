@@ -353,6 +353,31 @@ class DataBase():
         print(f'Data inserted in "{tablename}" -> {"{:,.0f}".format(len(data))} rows')
 
 
+    def copy_table(self, other_easydb: DataBase, tablename: str, column_case: str='same'):
+        '''
+        Copy specified table from other easy_db.DataBase to this DB.
+        If desired, column names can be set to be all upper or lower-case
+        via column_case kwarg ('upper' = UPPERCASE and 'lower' lowercase)
+        '''
+        data = other_easydb.pull_full_table(tablename, clear_cache=True)  # clearing cache to ensure fresh pull
+        if column_case.lower() == 'lower':
+            columns_and_types = {key.lower(): val for key, val in other_easydb.table_columns_and_types(tablename).items()}
+            table_data = [{col.lower(): val for col, val in d.items()} for d in data]
+        elif column_case.lower() == 'upper':
+            columns_and_types = {key.upper(): val for key, val in other_easydb.table_columns_and_types(tablename).items()}
+            table_data = [{col.upper(): val for col, val in d.items()} for d in data]
+        else:
+            if column_case.lower() != 'same':
+                print('Warning!  .copy_table column_case kwarg must be "same", "upper", or "lower".  Defaulting to "same".')
+            columns_and_types = {key: val for key, val in other_easydb.table_columns_and_types(tablename).items()}
+            table_data = [{col: val for col, val in d.items()} for d in data]
+
+        self.drop_table(tablename)
+        self.create_table(tablename, columns_and_types)
+        self.append_to_table(tablename, table_data)
+        print(f'Table {tablename} copied!')
+
+
     def __repr__(self) -> str:
         return f'DataBase: {self.db_location_str}'
 
