@@ -260,12 +260,6 @@ class DataBase():
         force_overwrite kwarg allows to overwrite existing table if present
         (by default will NOT overwrite/change existing table.)
         '''
-        if tablename in self.pull_all_table_names() and not force_overwrite:
-            print(f'ERROR!  Cannot create table {tablename} as it already exists!')
-            print('Please choose a different name or use force_overwrite=True to overwrite.')
-
-        conn, cursor = self.connection(also_cursor=True)
-
         if self.db_type == 'ACCESS':
             type_map = {float: 'double',
                         'float': 'double',
@@ -304,11 +298,18 @@ class DataBase():
             print('ERROR!  Table creation only implemented in SQLite and Access currently.')
             return
 
+        if tablename in self.pull_all_table_names() and not force_overwrite:
+            print(f'ERROR!  Cannot create table {tablename} as it already exists!')
+            print('Please choose a different name or use force_overwrite=True to overwrite.')
+            return
+        elif tablename in self.pull_all_table_names() and force_overwrite:
+            self.drop_table(tablename)
 
+        conn, cursor = self.connection(also_cursor=True)
         cursor.execute(sql)
         conn.commit()
         conn.close()
-        print(f'Table {tablename} successfully created!')
+        print(f'Table {tablename} successfully created.')
 
 
     def drop_table(self, tablename: str):
