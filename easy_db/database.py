@@ -5,6 +5,7 @@ import sqlite3
 import pyodbc
 import os
 import time
+import random
 from functools import lru_cache
 from functools import wraps
 import tqdm
@@ -358,7 +359,7 @@ class DataBase():
                 upload_complete = True
                 break
             except sqlite3.OperationalError:  # database is locked
-                pass
+                time.sleep(random.random() / 10)
 
         conn.commit()
         conn.close()
