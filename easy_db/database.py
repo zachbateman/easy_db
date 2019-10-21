@@ -215,6 +215,8 @@ class DataBase():
         conn, cursor = self.connection(also_cursor=True)
         if self.db_type == 'SQLITE3':
             tables = [tup[0] for tup in cursor.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()]
+        elif self.db_type == 'ACCESS':
+            tables = [tup[2] for tup in cursor.tables() if tup[3] == 'TABLE']
         else:
             tables = cursor.tables()
 
