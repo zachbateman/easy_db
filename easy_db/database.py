@@ -348,7 +348,11 @@ class DataBase():
         else:
             columns = [col for col in self.table_columns_and_types(tablename)]
 
-        sql = f"INSERT INTO '{tablename}' ({', '.join([k for k in columns])}) VALUES ({', '.join(['?' for _ in range(len(columns))])});"
+        if self.db_type == 'SQLITE3':
+            sql = f"INSERT INTO '{tablename}'"
+        else:
+            sql = f"INSERT INTO [{tablename}]"
+        sql += f" ({', '.join([k for k in columns])}) VALUES ({', '.join(['?' for _ in range(len(columns))])});"
         data_to_insert = [tuple(row_dict[col] for col in columns) for row_dict in data]
         conn, cursor = self.connection(also_cursor=True)
 
