@@ -391,8 +391,8 @@ class DataBase():
         else:
             if column_case.lower() != 'same':
                 print('Warning!  .copy_table column_case kwarg must be "same", "upper", or "lower".  Defaulting to "same".')
-            columns_and_types = {key: val for key, val in other_easydb.table_columns_and_types(tablename).items()}
-            table_data = [{col: val for col, val in d.items()} for d in data]
+            columns_and_types = other_easydb.table_columns_and_types(tablename)
+            table_data = data
 
         self.drop_table(tablename)
         self.create_table(tablename, columns_and_types)
