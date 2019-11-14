@@ -169,6 +169,11 @@ class DataBase():
             self.pull_full_table.cache_clear()
             return self.pull_full_table(tablename, columns)
         else:
+            # check for questionable table/column names
+            for name in [tablename] + list(columns):
+                if not util.name_clean(name):
+                    return
+
             if columns == 'all':
                 sql = f'SELECT * FROM {tablename};'
             else:
