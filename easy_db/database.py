@@ -380,7 +380,7 @@ class DataBase():
             print(f'ERROR!  Unable to append data to "{tablename}".\n  -> Is the database locked?')
 
 
-    def copy_table(self, other_easydb, tablename: str, column_case: str='same'):
+    def copy_table(self, other_easydb, tablename: str, new_tablename: str='', column_case: str='same'):
         '''
         Copy specified table from other easy_db.DataBase to this DB.
         If desired, column names can be set to be all upper or lower-case
@@ -399,6 +399,8 @@ class DataBase():
             columns_and_types = other_easydb.table_columns_and_types(tablename)
             table_data = data
 
+        if new_tablename != '':
+            tablename = new_tablename
         self.drop_table(tablename)
         self.create_table(tablename, columns_and_types)
         self.append_to_table(tablename, table_data)
