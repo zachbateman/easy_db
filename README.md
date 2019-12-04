@@ -1,35 +1,60 @@
 # easy_db
 
-easy_db is a tool designed to quickly allow Python database interaction capabilities from a consolidated, simple user interface.
+easy_db is a tool designed to quickly allow Python database interaction capabilities from a consolidated, intuitive user interface provided by the "DataBase" class.
 
-# Current Features
+# Goals
 
-  - DataBase class can handle both SQLite and Access file-based databases
-    - To "connect" to a database, use:
-        ```sh
-        db = easy_db.DataBase('test_sqlite3_db.db')
-        ```
-    - Then, retrieve table names with:
-        ```sh
-        db.pull_all_table_names()
-        ```
-    - Run a "SELECT * ..." query on any table:
-        ```sh
-        db.pull_full_table('TEST_TABLE')
-        ```
-        - returned object is a list of dicts where each dict represents a row and is form {column: value}
-        - pull_full_table uses functools.lru_cache to limit repetative database queries
+ - Intelligently handle connecting to various database types
+ - Provide intuitive, consistent, Pythonic methods for accessing data
+ - Make common tasks very easy
+ - Provide high performance without requiring polished query code
+ - Expose database connection and cursor to users wanting fine-grained control
+ - Just get the data into Python so we can use it!
 
-  - For more fine-grained control of database work, the`DataBase.provide_db_connection` method is a decorator that can provide functions with a database connection (and cursor if specified).
-        ```sh
-        db = easy_db.DataBase('test_sqlite3_db.db')
+# Quick Start
 
-        @db.provide_db_connection(also_cursor=True)
-        def awesome_function(conn, cursor, x):
-            data = cursor.execute('...SPECIAL SQL...').fetchall()
-            conn.close()
-            return data
-        ```
+Let's first connect to a SQLite database.
+```sh
+import easy_db
+db = easy_db.DataBase('test_sqlite3_db.db')
+```
+
+Now let's see what tables are available in this database.
+```sh
+tables = db.pull_all_table_names()
+```
+
+Table columns and types are simple to investigate.
+```sh
+print(db.table_columns_and_types('example_table'))
+```
+
+Let's pull all of the data from a table.  We could start with something like "SELECT * ..." but this is way more fun:
+```sh
+data = db.pull_full_table('example_table')
+```
+
+Note that the table/query data is returned as a list of dictionaries with column names as dictionary keys.
+
+ - Pro Tip:  If desired, a Pandas dataframe of the same form as the database table can be easily created from this data structure using:
+```sh
+import pandas
+df = pandas.DataFrame(data)
+```
+
+
+Now perhaps we have an Access database and would like to pull in a table from our SQLite database.  easy_db makes this quick and easy and gracefully handles the nuances of dealing with the different databases.
+```sh
+import easy_db
+
+db = easy_db.DataBase('test_sqlite3_db.db')
+db_2 = easy_db.DataBase('test_access_db.accdb')
+
+db_2.copy_table(db, 'example_table')
+```
+
+Thanks for checking out easy_db, and please take a look at the methods of the DataBase class if you'd like to see what other capabilities are currently available!
+
 
 License
 ----
