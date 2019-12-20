@@ -4,10 +4,10 @@ easy_db is a tool designed to quickly allow Python database interaction capabili
 
 # Goals
 
- - Intelligently handle connecting to various database types
+ - Make common database tasks very easy
+ - Intelligently handle different database types
  - Provide intuitive, consistent, Pythonic methods for accessing data
- - Make common tasks very easy
- - Provide high performance without requiring polished query code
+ - Provide good performance without requiring polished query code
  - Expose database connection and cursor to users wanting fine-grained control
  - Just get the data into Python so we can use it!
 
