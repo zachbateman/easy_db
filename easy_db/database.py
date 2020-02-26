@@ -17,7 +17,7 @@ from . import util
 
 class DataBase():
 
-    def __init__(self, db_location_str: str='') -> None:
+    def __init__(self, db_location_str: str='', create_if_none: bool=True) -> None:
         self.db_location_str = db_location_str
 
         self.db_type = self._find_db_type()
@@ -27,6 +27,8 @@ class DataBase():
             self.connection = self._connection_sql_server
         elif self.db_type == 'SQLITE3':
             self.connection = self._connection_sqlite
+            if create_if_none:
+                self.connection(create_if_none=True)
 
 
 
