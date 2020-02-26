@@ -344,50 +344,49 @@ class DataBase():
             print('ERROR!  Table deletion only implemented in SQLite currently.')
 
 
-    def append_to_table(self, tablename: str, data: list, create_table_if_needed: bool=True):
+    def append_to_table(self, tablename: str, data: list, create_table_if_needed: bool=True, safe=False):
         '''
         Append rows of data to database table.
         Create the table in the database if it doesn't exist if create_table_if_needed is True
 
         "data" arg is list of row dicts where each row dict contains all columns as keys.
         '''
-        if tablename not in self.pull_all_table_names():
-            if create_table_if_needed:
-                columns_and_types = {key: type(value).__name__ for key, value in data[0].items()}
-                self.create_table(tablename, columns_and_types)
-                columns = [col for col in columns_and_types]
-            else:
-                print(f'ERROR!  Table "{tablename}" does not exist in database!')
-                print('Use create_table_if_needed=True if you would like to create it.')
-                return None
-        else:
-            columns = [col for col in self.table_columns_and_types(tablename)]
+        if tablename not in self.pull_all_table_names() and create_table_if_needed:
+            columns_and_types = {key: type(value).__name__ for key, value in data[0].items()}
+            self.create_table(tablename, columns_and_types)
+        elif tablename not in self.pull_all_table_names() and not create_table_if_needed:
+            print(f'ERROR!  Table "{tablename}" does not exist in database!')
+            print('Use create_table_if_needed=True if you would like to create it.')
+            return None
+
+        columns = [col for col in self.table_columns_and_types(tablename)]
 
         if self.db_type == 'SQLITE3':
-            sql = f"INSERT INTO '{tablename}'"
+            insert_sql = f"INSERT INTO '{tablename}' ({','.join(columns)}) VALUES "
         else:
-            sql = f"INSERT INTO [{tablename}]"
-        sql += f" ({', '.join([k for k in columns])}) VALUES ({', '.join(['?' for _ in range(len(columns))])});"
-        data_to_insert = [tuple(row_dict[col] for col in columns) for row_dict in data]
+            insert_sql = f"INSERT INTO [{tablename}] ({', '.join(columns)}) VALUES "
+        insert_many_sql = insert_sql + f"({', '.join(['?' for _ in range(len(columns))])});"
+
         conn, cursor = self.connection(also_cursor=True)
 
-        # Following loop repeatedly attempts to append data to table if sqlite
-        # db is locked from another transaction (will try for 10 seconds)
-        t0, upload_complete = time.time(), False
-        while time.time() - t0 < 10:
+        pbar = tqdm.tqdm(total=len(data))
+        original_data_len = len(data)
+        while len(data) > 0:
             try:
-                cursor.executemany(sql, data_to_insert)
-                upload_complete = True
-                break
+                if safe:
+                    for row in data[-100:]:
+                        cursor.execute(insert_sql + "(" + ','.join(["'" + str(row[col]) + "'" for col in columns]) + ");")
+                elif not safe:
+                    cursor.executemany(insert_many_sql, [tuple(row_dict[col] for col in columns) for row_dict in data[-100:]])
+                pbar.update(100 if len(data) >= 100 else len(data))
+                data = data[:-100]
             except sqlite3.OperationalError:  # database is locked
+                print('database locked; retrying')
                 time.sleep(random.random() / 10)
-
+        pbar.close()
         conn.commit()
         conn.close()
-        if upload_complete:
-            print(f'Data inserted in "{tablename}" -> {"{:,.0f}".format(len(data))} rows')
-        else:
-            print(f'ERROR!  Unable to append data to "{tablename}".\n  -> Is the database locked?')
+        print(f'Data inserted in "{tablename}" -> {"{:,.0f}".format(original_data_len)} rows')
 
 
     def copy_table(self, other_easydb, tablename: str, new_tablename: str='', column_case: str='same'):
