@@ -40,6 +40,12 @@ class TestSQLite(unittest.TestCase):
         self.assertTrue(len(test_pulled_data) == 116)
         self.assertTrue(all(d['parameter'] in [0.66, 0.67] for d in test_pulled_data))
 
+    def test_table_creation_and_deletion(self):
+        self.database.create_table('TEST_TABLE_CREATION', {'col_1': str, 'col_2': float})
+        self.database.append_to_table('TEST_TABLE_CREATION', [{'col_1': 'row_A', 'col_2': 1.5}, {'col_1': 'row_B', 'col_2': 3.7}])
+        self.database.drop_table('TEST_TABLE_CREATION')
+        self.assertTrue(True)
+
 
 class TestUtil(unittest.TestCase):
 

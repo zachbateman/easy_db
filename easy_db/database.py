@@ -325,11 +325,21 @@ class DataBase():
         Drop/delete the specified table from the database.
         '''
         if self.db_type == 'SQLITE3':
+            t0, drop_complete = time.time(), False
             conn, cursor = self.connection(also_cursor=True)
-            cursor.execute(f'DROP TABLE IF EXISTS "{tablename}";')
-            conn.commit()
+            while time.time() - t0 < 10:
+                try:
+                    cursor.execute(f'DROP TABLE IF EXISTS "{tablename}";')
+                    conn.commit()
+                    drop_complete = True
+                    break
+                except sqlite3.OperationalError:
+                    pass
             conn.close()
-            print(f'Table {tablename} deleted.')
+            if drop_complete:
+                print(f'Table "{tablename}" deleted.')
+            else:
+                print(f'Unable to drop table "{tablename}" as the database is locked!')
         else:
             print('ERROR!  Table deletion only implemented in SQLite currently.')
 
