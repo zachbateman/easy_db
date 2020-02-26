@@ -110,7 +110,7 @@ class DataBase():
 
 
     @lru_cache(maxsize=4)
-    def pull_full_table(self, tablename: str, columns='all', clear_cache=False) -> list:
+    def pull_table(self, tablename: str, columns='all', clear_cache=False) -> list:
         '''
         SELECT * Query for full table as specified from tablename.
 
@@ -125,8 +125,8 @@ class DataBase():
         Return list of dicts for rows with column names as keys.
         '''
         if clear_cache:
-            self.pull_full_table.cache_clear()
-            return self.pull_full_table(tablename, columns)
+            self.pull_table.cache_clear()
+            return self.pull_table(tablename, columns)
         else:
             # check for questionable table/column names
             for name in [tablename] + list(columns):
@@ -354,7 +354,7 @@ class DataBase():
         If desired, column names can be set to be all upper or lower-case
         via column_case kwarg ('upper' = UPPERCASE and 'lower' lowercase)
         '''
-        data = other_easydb.pull_full_table(tablename, clear_cache=True)  # clearing cache to ensure fresh pull
+        data = other_easydb.pull_table(tablename, clear_cache=True)  # clearing cache to ensure fresh pull
         if column_case.lower() == 'lower':
             columns_and_types = {key.lower(): val for key, val in other_easydb.table_columns_and_types(tablename).items()}
             table_data = [{col.lower(): val for col, val in d.items()} for d in data]

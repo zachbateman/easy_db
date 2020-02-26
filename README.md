@@ -31,7 +31,7 @@ print(db.table_columns_and_types('example_table'))
 
 Let's pull all of the data from a table.  We could start with something like "SELECT * ..." but this is way more fun:
 ```sh
-data = db.pull_full_table('example_table')
+data = db.pull_table('example_table')
 ```
 
 Note that the table/query data is returned as a list of dictionaries with column names as dictionary keys.

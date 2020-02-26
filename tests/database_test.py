@@ -21,14 +21,14 @@ class TestSQLite(unittest.TestCase):
         self.assertTrue(tables == sorted(tables))
 
     def test_full_table_pull(self):
-        test_table_data = self.database.pull_full_table('TEST_TABLE')
+        test_table_data = self.database.pull_table('TEST_TABLE')
         print(test_table_data[0])
         self.assertTrue(type(test_table_data) == list)
         self.assertTrue(type(test_table_data[0]) == dict)
         self.assertTrue(len(test_table_data) == 31)
 
     def test_full_table_pull_specific_columns(self):
-        test_table_data = self.database.pull_full_table('TEST_TABLE', columns=('row_id', 'value_1'))
+        test_table_data = self.database.pull_table('TEST_TABLE', columns=('row_id', 'value_1'))
         print(test_table_data[0])
         self.assertTrue(type(test_table_data) == list)
         self.assertTrue(type(test_table_data[0]) == dict)
@@ -61,9 +61,9 @@ class TestUtil(unittest.TestCase):
         self.assertFalse(easy_db.util.name_clean('drop'))
 
     def test_malicious_query(self):
-        data = self.database.pull_full_table('DROP TABLE TEST_TABLE')
+        data = self.database.pull_table('DROP TABLE TEST_TABLE')
         self.assertTrue(data is None)
-        data = self.database.pull_full_table('TEST_TABLE', columns=('row_id;1=1;--', 'value_1'))
+        data = self.database.pull_table('TEST_TABLE', columns=('row_id;1=1;--', 'value_1'))
         self.assertTrue(data is None)
 
 
