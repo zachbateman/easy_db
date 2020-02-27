@@ -325,6 +325,10 @@ class DataBase():
             return None
 
         columns = [col for col in self.table_columns_and_types(tablename)]
+        data_cols = [col for col in data[0]]
+        if data_cols != columns:
+            print('Append data column order adjusted to match db table column order.')
+            data = [{col: d[col]  for col in columns} for d in data]
 
         if self.db_type == 'SQLITE3':
             insert_sql = f"INSERT INTO '{tablename}' ({','.join(columns)}) VALUES "
