@@ -27,8 +27,11 @@ class DataBase():
             self.connection = self._connection_sql_server
         elif self.db_type == 'SQLITE3':
             self.connection = self._connection_sqlite
-            if create_if_none:
-                self.connection(create_if_none=True)
+        elif db_location_str[-3:].lower() == '.db' and create_if_none:
+            self.connection = self._connection_sqlite
+            self.connection(create_if_none=True)
+        else:
+            print(f'Error: database {db_location_str} not found.')
 
 
 
