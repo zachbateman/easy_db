@@ -51,6 +51,7 @@ def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str, par
             print('\nERROR - Unable to read column names.')
             print('This may occur if using Access database with column descriptions populated.')
             print('Try deleting the column descriptions.\n')
+            return [{}]
     table_data = [dict(zip(columns, row)) for row in data]
     return table_data
 
