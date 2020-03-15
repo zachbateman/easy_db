@@ -278,11 +278,21 @@ class DataBase():
         elif tablename in self.pull_all_table_names() and force_overwrite:
             self.drop_table(tablename)
 
+        t0, create_complete = time.time(), False
         conn, cursor = self.connection(also_cursor=True)
-        cursor.execute(sql)
-        conn.commit()
+        while time.time() - t0 < 10:
+            try:
+                cursor.execute(sql)
+                conn.commit()
+                create_complete = True
+                break
+            except sqlite3.OperationalError:
+                pass
         conn.close()
-        print(f'Table {tablename} successfully created.')
+        if create_complete:
+            print(f'Table {tablename} successfully created.')
+        else:
+            print(f'Unable to create table "{tablename}" as the database is locked!')
 
 
     def drop_table(self, tablename: str):
