@@ -140,9 +140,9 @@ class DataBase():
                     return
 
             if columns == 'all':
-                sql = f'SELECT * FROM {tablename};'
+                sql = f'SELECT * FROM "{tablename}";'
             else:
-                sql = f'SELECT {", ".join(columns)} FROM {tablename};'
+                sql = f'SELECT {", ".join(columns)} FROM "{tablename}";'
             conn, cursor = self.connection(also_cursor=True)
             data = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
             conn.close()

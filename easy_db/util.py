@@ -57,7 +57,7 @@ def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str, par
 
 
 # set for quickly checking possibly malicious characters
-unallowed_characters = {';', '(', ')', '-', '=', '+', "'", '"', '.', '[', ']', ',',
+unallowed_characters = {';', '(', ')', '=', '+', "'", '"', '.', '[', ']', ',',
     '{', '}', '\\', '/', '`', '~', '!', '@', '#', '$', '%', '^', '&', '*'}
 
 def name_clean(name: str) -> bool:
