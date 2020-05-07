@@ -5,7 +5,7 @@ with open('README.md', 'r') as f:
 
 setuptools.setup(
     name='easy_db',
-    version='0.5.14',
+    version='0.5.15',
     packages=['easy_db'],
     license='MIT',
     author='Zach Bateman',

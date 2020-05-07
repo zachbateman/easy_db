@@ -115,7 +115,6 @@ class DataBase():
             print(f'Current database is: {self.db_type}')
 
 
-    @lru_cache(maxsize=4)
     def pull_table(self, tablename: str, columns='all', clear_cache=False) -> list:
         '''
         SELECT * Query for full table as specified from tablename.
@@ -130,8 +129,11 @@ class DataBase():
 
         Return list of dicts for rows with column names as keys.
         '''
+        if not hasattr(self, '_pull_table_cache'):
+            self._pull_table_cache = {}  # provide caching dictionary if does not yet exist
+
         if clear_cache:
-            self.pull_table.cache_clear()
+            self._pull_table_cache = {}
             return self.pull_table(tablename, columns)
         else:
             # check for questionable table/column names
@@ -139,14 +141,16 @@ class DataBase():
                 if not util.name_clean(name):
                     return
 
-            if columns == 'all':
-                sql = f'SELECT * FROM "{tablename}";'
-            else:
-                sql = f'SELECT {", ".join(columns)} FROM "{tablename}";'
-            conn, cursor = self.connection(also_cursor=True)
-            data = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
-            conn.close()
-            return data
+            requested_data_key = f'{tablename}_' + '_'.join(sorted(columns))  # key string for caching db pulls in dict
+            if requested_data_key not in self._pull_table_cache:
+                if columns == 'all':
+                    sql = f'SELECT * FROM "{tablename}";'
+                else:
+                    sql = f'SELECT {", ".join(columns)} FROM "{tablename}";'
+                conn, cursor = self.connection(also_cursor=True)
+                self._pull_table_cache[requested_data_key] = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
+                conn.close()
+            return self._pull_table_cache[requested_data_key]
 
 
     def pull_table_where(self, tablename: str, condition: str) -> list:
