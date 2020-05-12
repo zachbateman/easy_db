@@ -266,6 +266,7 @@ class DataBase():
                         'str': 'TEXT',
                         'text': 'TEXT',
                         'varchar': 'TEXT',
+                        'date': 'DATE',
                         'datetime': 'DATE',
                         'longchar': 'TEXT',
                         }
