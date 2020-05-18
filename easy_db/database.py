@@ -115,7 +115,7 @@ class DataBase():
             print(f'Current database is: {self.db_type}')
 
 
-    def pull_table(self, tablename: str, columns='all', clear_cache=False, progress_handler=None) -> list:
+    def pull_table(self, tablename: str, columns='all', clear_cache=False) -> list:
         '''
         SELECT * Query for full table as specified from tablename.
 
@@ -148,7 +148,6 @@ class DataBase():
                 else:
                     sql = f'SELECT {", ".join(columns)} FROM "{tablename}";'
                 conn, cursor = self.connection(also_cursor=True)
-                conn.set_progress_handler(progress_handler, 100) # Can use to track progress
                 self._pull_table_cache[requested_data_key] = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
                 conn.close()
             return self._pull_table_cache[requested_data_key]
