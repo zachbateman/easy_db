@@ -46,6 +46,10 @@ class TestSQLite(unittest.TestCase):
         self.database.drop_table('TEST_TABLE_CREATION')
         self.assertTrue(True)
 
+    def test_progress_callback(self):
+        callback = lambda *args: print('Making progress...')
+        data = self.database.pull_table('THIRD_TABLE', progress_handler=callback)
+
 
 class TestUtil(unittest.TestCase):
 

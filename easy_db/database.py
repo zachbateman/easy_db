@@ -129,6 +129,8 @@ class DataBase():
         
         progress_handler kwarg can be used to provide status updates to a callback.
 
+        progress_handler kwarg can be used to provide status updates to a callback.
+
         Return list of dicts for rows with column names as keys.
         '''
         if not hasattr(self, '_pull_table_cache'):
@@ -150,7 +152,13 @@ class DataBase():
                 else:
                     sql = f'SELECT {", ".join(columns)} FROM "{tablename}";'
                 conn, cursor = self.connection(also_cursor=True)
-                conn.set_progress_handler(progress_handler, 100)  # Can use to track progress
+
+                if progress_handler is not None:
+                    if self.db_type == 'SQLITE3':  # progress_handler only currently working for sqlite
+                        conn.set_progress_handler(progress_handler, 100)  # Can use to track progress
+                    else:
+                        print('progress_handler is only available for use with a SQLite database.')
+
                 self._pull_table_cache[requested_data_key] = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
                 conn.close()
             return self._pull_table_cache[requested_data_key]
