@@ -382,13 +382,13 @@ class DataBase():
         print(f'Data inserted in "{tablename}" -> {"{:,.0f}".format(original_data_len)} rows')
 
 
-    def copy_table(self, other_easydb, tablename: str, new_tablename: str='', column_case: str='same'):
+    def copy_table(self, other_easydb, tablename: str, new_tablename: str='', column_case: str='same', progress_handler=None):
         '''
         Copy specified table from other easy_db.DataBase to this DB.
         If desired, column names can be set to be all upper or lower-case
         via column_case kwarg ('upper' = UPPERCASE and 'lower' lowercase)
         '''
-        data = other_easydb.pull_table(tablename, clear_cache=True)  # clearing cache to ensure fresh pull
+        data = other_easydb.pull_table(tablename, clear_cache=True, progress_handler=progress_handler)  # clearing cache to ensure fresh pull
         if column_case.lower() == 'lower':
             columns_and_types = {key.lower(): val for key, val in other_easydb.table_columns_and_types(tablename).items()}
             table_data = [{col.lower(): val for col, val in d.items()} for d in data]
