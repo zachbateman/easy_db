@@ -153,7 +153,7 @@ class DataBase():
 
                 if progress_handler is not None:
                     if self.db_type == 'SQLITE3':  # progress_handler only currently working for sqlite
-                        conn.set_progress_handler(progress_handler, 100)  # Can use to track progress
+                        conn.set_progress_handler(*progress_handler if type(progress_handler) is tuple else (progress_handler, 100)) # Can use to track progress
                     else:
                         print('progress_handler is only available for use with a SQLite database.')
 
