@@ -50,6 +50,10 @@ class TestSQLite(unittest.TestCase):
         callback = lambda *args: print('Making progress...')
         data = self.database.pull_table('THIRD_TABLE', progress_handler=callback)
 
+    def test_progress_callback_with_n(self):
+        callback = lambda *args: print('Making progress 2...')
+        data = self.database.pull_table('THIRD_TABLE', progress_handler=(callback, 1000))
+
 
 class TestUtil(unittest.TestCase):
 

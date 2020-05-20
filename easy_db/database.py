@@ -129,6 +129,12 @@ class DataBase():
 
         progress_handler kwarg can be used to provide status updates to a callback.
 
+        progress_handler type can be either a callback function or a 2-tuple
+        where the first item is the callback and the second item is the "n" arg passed
+        to the sqlite3 conn.set_progress_handler function that specifies
+        the interval at which the callback is called. (# of SQLite instructions)
+        Basically, a larger "n" value reduces the number of callbacks.
+
         Return list of dicts for rows with column names as keys.
         '''
         if not hasattr(self, '_pull_table_cache'):
@@ -153,7 +159,7 @@ class DataBase():
 
                 if progress_handler is not None:
                     if self.db_type == 'SQLITE3':  # progress_handler only currently working for sqlite
-                        conn.set_progress_handler(*progress_handler if type(progress_handler) is tuple else (progress_handler, 100)) # Can use to track progress
+                        conn.set_progress_handler(*progress_handler if type(progress_handler) is tuple else (progress_handler, 100))  # Can use to track progress
                     else:
                         print('progress_handler is only available for use with a SQLite database.')
 
