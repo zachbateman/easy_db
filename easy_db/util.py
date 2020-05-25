@@ -75,3 +75,21 @@ def name_clean(name: str) -> bool:
         print(f'ERROR!!!  Prohibited characters detected in:\n  {name}')
         return False
     return True
+
+
+def clean_column_name(col_name: str) -> str:
+    '''
+    Used to ensure column names do not have spaces or forward slashes
+    Replace each bad character with an underscore.
+    '''
+    original_col_name = col_name
+    changed = False
+    if ' ' in col_name:
+        col_name = col_name.replace(' ', '_')
+        changed = True
+    if '/' in col_name:
+        col_name = col_name.replace('/', '_')
+        changed = True
+    if changed:
+        print(f'Column Name {original_col_name} changed to {col_name}')
+    return col_name

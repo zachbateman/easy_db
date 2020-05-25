@@ -180,7 +180,7 @@ class DataBase():
         return data
 
 
-    def pull_table_where_id_in_list(self, tablename: str, id_col: str, match_values: list, use_multip: bool=True, progressbar: bool=True) -> list:
+    def pull_table_where_id_in_list(self, tablename: str, id_col: str, match_values: list, use_multip: bool=False, progressbar: bool=True) -> list:
         '''
         Pulls all data from table where id_col value is in the provided match_values_to_use.
         Can use multiprocessing if use_multip specified as True.
@@ -265,8 +265,6 @@ class DataBase():
                         'str': 'CHAR',
                         'text': 'CHAR',
                         }
-            column_types = ', '.join([f'{k} {type_map[v]}' for k, v in columns_and_types])
-            sql = f"CREATE TABLE {tablename}({column_types});"
         elif self.db_type == 'SQLITE3':
             type_map = {float: 'REAL',
                         'float': 'REAL',
@@ -285,11 +283,16 @@ class DataBase():
                         'datetime': 'DATE',
                         'longchar': 'TEXT',
                         }
-            column_types = ', '.join([f'{k} {type_map[v]}' for k, v in columns_and_types.items()])
-            sql = f"CREATE TABLE '{tablename}'({column_types});"
         else:
             print('ERROR!  Table creation only implemented in SQLite and Access currently.')
             return
+
+        columns_and_types = {util.clean_column_name(col): v for col, v in columns_and_types.items()}  # make sure column names are good
+        column_types = ', '.join([f'{col} {type_map[v]}' for col, v in columns_and_types.items()])
+        if self.db_type == 'ACCESS':
+            sql = f"CREATE TABLE {tablename}({column_types});"
+        elif self.db_type == 'SQLITE3':
+            sql = f"CREATE TABLE '{tablename}'({column_types});"
 
         if tablename in self.pull_all_table_names() and not force_overwrite:
             print(f'ERROR!  Cannot create table {tablename} as it already exists!')
@@ -306,13 +309,14 @@ class DataBase():
                 conn.commit()
                 create_complete = True
                 break
-            except sqlite3.OperationalError:
+            except sqlite3.OperationalError as err:
                 pass
         conn.close()
         if create_complete:
             print(f'Table {tablename} successfully created.')
         else:
-            print(f'Unable to create table "{tablename}" as the database is locked!')
+            print(err)
+            print(f'\nUnable to create table "{tablename}"\nPerhaps the database is locked?!')
 
 
     def drop_table(self, tablename: str):
