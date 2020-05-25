@@ -54,6 +54,20 @@ class TestSQLite(unittest.TestCase):
         callback = lambda *args: print('Making progress 2...')
         data = self.database.pull_table('THIRD_TABLE', progress_handler=(callback, 1000))
 
+    def test_duplicate_deletion(self):
+        data = [{'c1': 5, 'c2': 6, 'c3': 7, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 7, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 3, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 3, 'c4': 8}]
+        self.database.drop_table('DUP_TABLE')
+        self.database.append_to_table('DUP_TABLE', data)
+        self.assertTrue(self.database.pull_table('DUP_TABLE') == data)
+        self.database.delete_duplicates('DUP_TABLE')
+        self.assertTrue(self.database.pull_table('DUP_TABLE', clear_cache=True) == data[:3])
+        self.database.delete_duplicates('DUP_TABLE', grouping_columns=['c1', 'c2'])
+        self.assertTrue(len(self.database.pull_table('DUP_TABLE', clear_cache=True)) == 2)
+        self.database.append_to_table('DUP_TABLE', data)
+        self.database.delete_duplicates('DUP_TABLE', grouping_columns=['c1'])
+        self.assertTrue(len(self.database.pull_table('DUP_TABLE', clear_cache=True)) == 1)
+        self.database.drop_table('DUP_TABLE')
+
 
 class TestUtil(unittest.TestCase):
 

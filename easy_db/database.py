@@ -319,6 +319,24 @@ class DataBase():
             print(f'\nUnable to create table "{tablename}"\nPerhaps the database is locked?!')
 
 
+    def delete_duplicates(self, tablename: str, grouping_columns=None):
+        '''
+        Delete duplicate rows from a db table while retaining most recently added row.
+        Duplicates are determined by grouping based on the grouping_columns kwarg (provide iterable).
+        If grouping_columns is not provided, all columns are used (rows much match perfectly).
+        '''
+        if self.db_type != 'SQLITE3':
+            print('.delete_duplicates currently only implemented for SQLite databases.')
+            return
+
+        if grouping_columns is None:
+            grouping_columns = sorted(self.table_columns_and_types(tablename).keys())
+        print(f'Deleting duplicate rows from {tablename}.  Please wait...')
+        conn, cursor = self.connection(also_cursor=True)
+        cursor.execute(f'DELETE FROM {tablename} WHERE rowid NOT IN (SELECT max(rowid) FROM {tablename} GROUP BY {", ".join(grouping_columns)})')
+        conn.commit()
+
+
     def drop_table(self, tablename: str):
         '''
         Drop/delete the specified table from the database.
