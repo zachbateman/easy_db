@@ -87,8 +87,8 @@ class DataBase():
             raise FileNotFoundError(error_str)
 
         conn = pyodbc.connect(
-        r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};" +
-        r'Dbq=' + self.db_location_str + ';')
+            r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};" +
+            r'Dbq=' + self.db_location_str + ';')
         if also_cursor:
             return conn, conn.cursor()
         else:
@@ -202,10 +202,9 @@ class DataBase():
         return _pull_table_using_id_list(match_values, *self.connection(also_cursor=True), tablename, id_col, self.db_type, progressbar=progressbar)
 
 
-    def pull_all_table_names(self, sorted_list=True) -> list:
+    def table_names(self) -> list:
         '''
-        Return list of all tables in the database.
-        list is sorted by default
+        Return sorted list of all tables in the database.
         '''
         conn, cursor = self.connection(also_cursor=True)
         if self.db_type == 'SQLITE3':
@@ -214,11 +213,7 @@ class DataBase():
             tables = [tup[2] for tup in cursor.tables() if tup[3] == 'TABLE']
         else:
             tables = cursor.tables()
-
-        if sorted_list:
-            return sorted(tables)
-        else:
-            return tables
+        return sorted(tables)
 
 
     def update(self, tablename: str, match_col: str, match_val, update_col: str, update_val, progress_handler=None):
@@ -353,11 +348,11 @@ class DataBase():
         elif self.db_type == 'SQLITE3':
             sql = f"CREATE TABLE '{tablename}'({column_types});"
 
-        if tablename in self.pull_all_table_names() and not force_overwrite:
+        if tablename in self.table_names() and not force_overwrite:
             print(f'ERROR!  Cannot create table {tablename} as it already exists!')
             print('Please choose a different name or use force_overwrite=True to overwrite.')
             return
-        elif tablename in self.pull_all_table_names() and force_overwrite:
+        elif tablename in self.table_names() and force_overwrite:
             self.drop_table(tablename)
 
         t0, create_complete = time.time(), False
@@ -400,7 +395,7 @@ class DataBase():
         '''
         Drop/delete the specified table from the database.
         '''
-        if tablename not in self.pull_all_table_names():
+        if tablename not in self.table_names():
             print(f'Table {tablename} does not exist; ignoring drop_table.')
             return
 
@@ -437,10 +432,10 @@ class DataBase():
 
         "data" arg is list of row dicts where each row dict contains all columns as keys.
         '''
-        if tablename not in self.pull_all_table_names() and create_table_if_needed:
+        if tablename not in self.table_names() and create_table_if_needed:
             columns_and_types = {key: type(value).__name__ for key, value in data[0].items()}
             self.create_table(tablename, columns_and_types)
-        elif tablename not in self.pull_all_table_names() and not create_table_if_needed:
+        elif tablename not in self.table_names() and not create_table_if_needed:
             print(f'ERROR!  Table "{tablename}" does not exist in database!')
             print('Use create_table_if_needed=True if you would like to create it.')
             return None

@@ -15,7 +15,7 @@ class TestSQLite(unittest.TestCase):
         self.assertTrue(self.database.db_type == 'SQLITE3')
 
     def test_tablename_pull(self):
-        tables = self.database.pull_all_table_names()
+        tables = self.database.table_names()
         print(tables)
         self.assertTrue(len(tables) == 3)
         self.assertTrue(tables == sorted(tables))
@@ -48,7 +48,7 @@ class TestSQLite(unittest.TestCase):
 
     def test_table_creation_bad_types(self):
         self.database.create_table('BAD_TYPES', {'col_1': str, 'col_2': str, 'col_3': 'bad_type', 'col_3': tuple()})
-        self.assertTrue('BAD_TYPES' not in self.database.pull_all_table_names())
+        self.assertTrue('BAD_TYPES' not in self.database.table_names())
 
     def test_progress_callback(self):
         callback = lambda *args: print('Making progress...')
