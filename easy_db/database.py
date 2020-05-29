@@ -135,7 +135,6 @@ class DataBase():
         table may have been updated since any previous calls.
 
         progress_handler kwarg can be used to provide status updates to a callback.
-
         progress_handler type can be either a callback function or a 2-tuple
         where the first item is the callback and the second item is the "n" arg passed
         to the sqlite3 conn.set_progress_handler function that specifies
@@ -220,6 +219,49 @@ class DataBase():
             return sorted(tables)
         else:
             return tables
+
+
+    def update(self, tablename: str, match_col: str, match_val, update_col: str, update_val, progress_handler=None):
+        '''
+        Update a database table with a value or values.
+
+        match_col arg specifies the column used for filtering/matching rows of the table.
+        match_val is the value or values used to filter the table.  A single value, or an iterable (list or tuple) of values can be provided.
+
+        update_col is... the column to be updated.
+        update_val can be a single value or an iterable (list or tuple) of values.
+
+        If single match_val and update_val args are specified, the table will be updated for a single cell
+        or several depending on if match_col[match_val] ends up with one row or more than one.
+
+        If iterable match_val and update_val args are provided, THESE ITERABLES MUST BE THE SAME LENGTH.
+        Additionally, the match_col must be UNIQUE/KEY identifiers so that each match_val corresponds to ONLY one row.
+
+        progress_handler kwarg can be used to provide status updates to a callback.
+        progress_handler type can be either a callback function or a 2-tuple
+        where the first item is the callback and the second item is the "n" arg passed
+        to the sqlite3 conn.set_progress_handler function that specifies
+        the interval at which the callback is called. (# of SQLite instructions)
+        Basically, a larger "n" value reduces the number of callbacks.
+        '''
+        conn, cursor = self.connection(also_cursor=True)
+
+        if progress_handler is not None:
+            if self.db_type == 'SQLITE3':  # progress_handler only currently working for sqlite
+                conn.set_progress_handler(*progress_handler if type(progress_handler) is tuple else (progress_handler, 100))  # Can use to track progress
+            else:
+                print('progress_handler is only available for use with a SQLite database.')
+
+        sql = f'UPDATE {tablename} SET {update_col}=? WHERE {match_col}=?;'  # can't pass column names in execute statement, just values
+        if isinstance(match_val, (list, tuple)):
+            if len(match_val) != len(update_val):
+                print('ERROR!  The number of match values must equal the number of update values!')
+                return
+            for m_val, u_val in tqdm.tqdm(zip(match_val, update_val), total=len(match_val)):
+                cursor.execute(sql, (u_val, m_val))
+        else:
+            cursor.execute(sql, (update_val, match_val))
+        conn.commit()
 
 
     def table_columns_and_types(self, tablename: str) -> dict:

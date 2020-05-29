@@ -72,6 +72,18 @@ class TestSQLite(unittest.TestCase):
         self.assertTrue(len(self.database.pull_table('DUP_TABLE', clear_cache=True)) == 1)
         self.database.drop_table('DUP_TABLE')
 
+    def test_update(self):
+        data = [{'c1': 1, 'c2': 2, 'c3': 3}, {'c1': 11, 'c2': 22, 'c3': 33}]
+        self.database.drop_table('UPDATE_TEST')
+        self.database.append_to_table('UPDATE_TEST', data)
+        self.assertTrue(data == self.database.pull_table('UPDATE_TEST'))
+        self.database.update('UPDATE_TEST', 'c1', 1, 'c2', -2)
+        self.assertTrue(self.database.pull_table('UPDATE_TEST', clear_cache=True) ==  [{'c1': 1, 'c2': -2, 'c3': 3}, {'c1': 11, 'c2': 22, 'c3': 33}])
+        self.database.update('UPDATE_TEST', 'c1', [1, 11], 'c3', [-3, -33])
+        self.assertTrue(self.database.pull_table('UPDATE_TEST', clear_cache=True) ==  [{'c1': 1, 'c2': -2, 'c3': -3}, {'c1': 11, 'c2': 22, 'c3': -33}])
+        self.database.drop_table('UPDATE_TEST')
+
+
 
 class TestUtil(unittest.TestCase):
 
