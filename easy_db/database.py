@@ -351,6 +351,10 @@ class DataBase():
         '''
         Drop/delete the specified table from the database.
         '''
+        if tablename not in self.pull_all_table_names():
+            print(f'Table {tablename} does not exist; ignoring drop_table.')
+            return
+
         if self.db_type == 'SQLITE3':
             t0, drop_complete = time.time(), False
             conn, cursor = self.connection(also_cursor=True)
@@ -367,8 +371,14 @@ class DataBase():
                 print(f'Table "{tablename}" deleted.')
             else:
                 print(f'Unable to drop table "{tablename}" as the database is locked!')
+        elif self.db_type == 'ACCESS':
+            conn, cursor = self.connection(also_cursor=True)
+            cursor.execute(f'DROP TABLE {tablename};')
+            conn.commit()
+            conn.close()
+            print(f'Table {tablename} deleted.')
         else:
-            print('ERROR!  Table deletion only implemented in SQLite currently.')
+            print('ERROR!  Table deletion only implemented in SQLite and Access currently.')
 
 
     def append_to_table(self, tablename: str, data: list, create_table_if_needed: bool=True, safe=False):
