@@ -261,9 +261,11 @@ class DataBase():
                         int: 'integer',
                         'int': 'integer',
                         'integer': 'integer',
-                        str: 'CHAR',
-                        'str': 'CHAR',
-                        'text': 'CHAR',
+                        str: 'varchar(255)',
+                        'str': 'varchar(255)',
+                        'text': 'varchar(255)',
+                        'varchar': 'varchar(255)',
+                        'datetime': 'datetime',
                         }
         elif self.db_type == 'SQLITE3':
             type_map = {float: 'REAL',
@@ -288,7 +290,15 @@ class DataBase():
             return
 
         columns_and_types = {util.clean_column_name(col): v for col, v in columns_and_types.items()}  # make sure column names are good
-        column_types = ', '.join([f'{col} {type_map[v]}' for col, v in columns_and_types.items()])
+        try:
+            column_types = ', '.join([f'{col} {type_map[v]}' for col, v in columns_and_types.items()])
+        except KeyError:
+            type_values = set(columns_and_types.values())
+            keys_not_in_type_map = [str(type_val) for type_val in type_values if type_val not in type_map]
+            print(f'ERROR in easy_db!  Unexpected type(s): {", ".join(keys_not_in_type_map)} in columns_and_types.')
+            print('-> Please submit a pull request adding these types to the .create_table type_maps!\n')
+            return
+
         if self.db_type == 'ACCESS':
             sql = f"CREATE TABLE {tablename}({column_types});"
         elif self.db_type == 'SQLITE3':
