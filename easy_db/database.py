@@ -377,7 +377,7 @@ class DataBase():
         '''
         Delete duplicate rows from a db table while retaining most recently added row.
         Duplicates are determined by grouping based on the grouping_columns kwarg (provide iterable).
-        If grouping_columns is not provided, all columns are used (rows much match perfectly).
+        If grouping_columns is not provided, all columns are used (rows must match perfectly).
         '''
         if self.db_type != 'SQLITE3':
             print('.delete_duplicates currently only implemented for SQLite databases.')

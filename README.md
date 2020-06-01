@@ -21,7 +21,7 @@ db = easy_db.DataBase('test_sqlite3_db.db')
 
 Now let's see what tables are available in this database.
 ```sh
-tables = db.pull_all_table_names()
+tables = db.table_names()
 ```
 
 Table columns and types are simple to investigate.
