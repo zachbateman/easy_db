@@ -159,6 +159,8 @@ class DataBase():
             if requested_data_key not in self._pull_table_cache:
                 if columns == 'all':
                     sql = f'SELECT * FROM "{tablename}";'
+                elif isinstance(columns, str):
+                    columns = [columns]  # convert to list for a single user-provided column string
                 else:
                     sql = f'SELECT {", ".join(columns)} FROM "{tablename}";'
                 conn, cursor = self.connection(also_cursor=True)
@@ -425,13 +427,20 @@ class DataBase():
             print('ERROR!  Table deletion only implemented in SQLite and Access currently.')
 
 
-    def append_to_table(self, tablename: str, data: list, create_table_if_needed: bool=True, safe=False):
+    def append_to_table(self, tablename: str, data: list, create_table_if_needed: bool=True, safe=False, clean_column_names=False):
         '''
         Append rows of data to database table.
         Create the table in the database if it doesn't exist if create_table_if_needed is True
 
         "data" arg is list of row dicts where each row dict contains all columns as keys.
         '''
+        if clean_column_names:
+            print('Cleaning column names in data to be appended.')
+            data_keys = list(data[0].keys())
+            for row in data:
+                for key in data_keys:
+                    row[util.clean_column_name(key)] = row.pop(key)
+
         if tablename not in self.table_names() and create_table_if_needed:
             columns_and_types = {key: type(value).__name__ for key, value in data[0].items()}
             self.create_table(tablename, columns_and_types)
@@ -443,8 +452,13 @@ class DataBase():
         columns = [col for col in self.table_columns_and_types(tablename)]
         data_cols = [col for col in data[0]]
         if data_cols != columns:
-            print('Append data column order adjusted to match db table column order.')
-            data = [{col: d[col]  for col in columns} for d in data]
+            try:
+                data = [{col: d[col]  for col in columns} for d in data]
+                print('Append data column order adjusted to match db table column order.')
+            except KeyError:
+                print(f'Error!  Table {tablename} columns do not match the keys of the data to be appended.')
+                print('Set clean_column_names=True to replace " " and "/" with underscores in data keys.')
+                return
 
         if self.db_type == 'SQLITE3':
             insert_sql = f"INSERT INTO '{tablename}' ({','.join(columns)}) VALUES "
