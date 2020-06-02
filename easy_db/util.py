@@ -40,7 +40,7 @@ def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str, par
         print(f'SQL: {sql}')
         return
 
-    if db_type == 'SQLITE3':
+    if db_type == 'SQLITE':
         columns = [description[0] for description in cursor.description]
     elif db_type == 'SQL SERVER':
         columns = [column[0] for column in cursor.description]

@@ -12,7 +12,7 @@ class TestSQLite(unittest.TestCase):
 
     def test_dbtype(self):
         print(self.database.db_type)
-        self.assertTrue(self.database.db_type == 'SQLITE3')
+        self.assertTrue(self.database.db_type == 'SQLITE')
 
     def test_tablename_pull(self):
         tables = self.database.table_names()

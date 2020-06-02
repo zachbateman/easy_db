@@ -32,12 +32,12 @@ class DataBase():
                 print('Try checking to ensure consistent 64 or 32 bitness between your Python install and your Access driver.\n\n')
         elif self.db_type == 'SQL SERVER':
             self.connection = self._connection_sql_server
-        elif self.db_type == 'SQLITE3':
+        elif self.db_type == 'SQLITE':
             self.connection = self._connection_sqlite
         elif db_location_str[-3:].lower() == '.db' and create_if_none:
             self.connection = self._connection_sqlite
             self.connection(create_if_none=True)
-            self.db_type = 'SQLITE3'
+            self.db_type = 'SQLITE'
         else:
             print(f'Error: database {db_location_str} not found.')
 
@@ -52,14 +52,14 @@ class DataBase():
         elif 'dsn' in self.db_location_str.lower():
             return 'SQL SERVER'
         elif util.check_if_file_is_sqlite(self.db_location_str):
-            return 'SQLITE3'
+            return 'SQLITE'
         else:
             return 'Database not recognized!'
 
 
     def _connection_sqlite(self, also_cursor: bool=False, create_if_none: bool=False):
         '''
-        Return a connection object to the Sqlite3 Database.
+        Return a connection object to the Sqlite Database.
         '''
         db_file_exists = True if os.path.isfile(self.db_location_str) else False
         if db_file_exists or create_if_none:
@@ -108,17 +108,17 @@ class DataBase():
 
     def compact_db(self) -> None:
         '''
-        Use "VACUUM" command to defragment and shrink sqlite3 database.
+        Use "VACUUM" command to defragment and shrink sqlite database.
         This can have a big impact after deleting many tables.
         Previous sqlite3 bug requiring connection kwarg
         isolation_level=None appears to be fixed.
         '''
-        if self.db_type == 'SQLITE3':
+        if self.db_type == 'SQLITE':
             conn = self.connection()
             conn.execute('VACUUM')
             conn.close()
         else:
-            print(f'compact_db() only implemented for SQLite3.')
+            print(f'compact_db() only implemented for SQLite.')
             print(f'Current database is: {self.db_type}')
 
 
@@ -166,7 +166,7 @@ class DataBase():
                 conn, cursor = self.connection(also_cursor=True)
 
                 if progress_handler is not None:
-                    if self.db_type == 'SQLITE3':  # progress_handler only currently working for sqlite
+                    if self.db_type == 'SQLITE':  # progress_handler only currently working for sqlite
                         conn.set_progress_handler(*progress_handler if type(progress_handler) is tuple else (progress_handler, 100))  # Can use to track progress
                     else:
                         print('progress_handler is only available for use with a SQLite database.')
@@ -209,7 +209,7 @@ class DataBase():
         Return sorted list of all tables in the database.
         '''
         conn, cursor = self.connection(also_cursor=True)
-        if self.db_type == 'SQLITE3':
+        if self.db_type == 'SQLITE':
             tables = [tup[0] for tup in cursor.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()]
         elif self.db_type == 'ACCESS':
             tables = [tup[2] for tup in cursor.tables() if tup[3] == 'TABLE']
@@ -230,7 +230,7 @@ class DataBase():
                 print('\nERROR - Unable to read columns.')
                 print('This may occur if using Access database with column descriptions populated.')
                 print('Try deleting the column descriptions.\n')
-        elif self.db_type == 'SQLITE3':
+        elif self.db_type == 'SQLITE':
             conn, cursor = self.connection(also_cursor=True)
             return {col[1]: col[2].lower() for col in cursor.execute(f"PRAGMA TABLE_INFO('{tablename}');").fetchall()}
         else:
@@ -270,7 +270,7 @@ class DataBase():
                         'varchar': 'varchar(255)',
                         'datetime': 'datetime',
                         }
-        elif self.db_type == 'SQLITE3':
+        elif self.db_type == 'SQLITE':
             type_map = {float: 'REAL',
                         'float': 'REAL',
                         'double': 'REAL',
@@ -304,7 +304,7 @@ class DataBase():
 
         if self.db_type == 'ACCESS':
             sql = f"CREATE TABLE {tablename}({column_types});"
-        elif self.db_type == 'SQLITE3':
+        elif self.db_type == 'SQLITE':
             sql = f"CREATE TABLE '{tablename}'({column_types});"
 
         if tablename in self.table_names() and not force_overwrite:
@@ -365,7 +365,7 @@ class DataBase():
                 print('Set clean_column_names=True to replace " " and "/" with underscores in data keys.')
                 return
 
-        if self.db_type == 'SQLITE3':
+        if self.db_type == 'SQLITE':
             insert_sql = f"INSERT INTO '{tablename}' ({','.join(columns)}) VALUES "
         else:
             insert_sql = f"INSERT INTO [{tablename}] ({', '.join(columns)}) VALUES "
@@ -419,7 +419,7 @@ class DataBase():
         conn, cursor = self.connection(also_cursor=True)
 
         if progress_handler is not None:
-            if self.db_type == 'SQLITE3':  # progress_handler only currently working for sqlite
+            if self.db_type == 'SQLITE':  # progress_handler only currently working for sqlite
                 conn.set_progress_handler(*progress_handler if type(progress_handler) is tuple else (progress_handler, 100))  # Can use to track progress
             else:
                 print('progress_handler is only available for use with a SQLite database.')
@@ -442,7 +442,7 @@ class DataBase():
         Duplicates are determined by grouping based on the grouping_columns kwarg (provide iterable).
         If grouping_columns is not provided, all columns are used (rows must match perfectly).
         '''
-        if self.db_type != 'SQLITE3':
+        if self.db_type != 'SQLITE':
             print('.delete_duplicates currently only implemented for SQLite databases.')
             return
 
@@ -462,7 +462,7 @@ class DataBase():
             print(f'Table {tablename} does not exist; ignoring drop_table.')
             return
 
-        if self.db_type == 'SQLITE3':
+        if self.db_type == 'SQLITE':
             t0, drop_complete = time.time(), False
             conn, cursor = self.connection(also_cursor=True)
             while time.time() - t0 < 10:
