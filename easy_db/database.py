@@ -454,6 +454,20 @@ class DataBase():
         conn.commit()
 
 
+    def create_index(self, tablename: str, column: str, index_name: str='', unique: bool=False):
+        if self.db_type == 'SQLITE':
+            index_name = column if index_name == '' else index_name  # use column name if not provided
+            conn, cursor = self.connection(also_cursor=True)
+            if unique:
+                cursor.execute(f'CREATE UNIQUE INDEX {index_name} on {tablename}({column});')
+            else:
+                cursor.execute(f'CREATE INDEX {index_name} on {tablename}({column});')
+            conn.commit()
+            conn.close()
+        else:
+            print('.create_index is currently only implemented for SQLite databases.')
+
+
     def drop_table(self, tablename: str):
         '''
         Drop/delete the specified table from the database.
