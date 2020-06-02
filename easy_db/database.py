@@ -218,49 +218,6 @@ class DataBase():
         return sorted(tables)
 
 
-    def update(self, tablename: str, match_col: str, match_val, update_col: str, update_val, progress_handler=None):
-        '''
-        Update a database table with a value or values.
-
-        match_col arg specifies the column used for filtering/matching rows of the table.
-        match_val is the value or values used to filter the table.  A single value, or an iterable (list or tuple) of values can be provided.
-
-        update_col is... the column to be updated.
-        update_val can be a single value or an iterable (list or tuple) of values.
-
-        If single match_val and update_val args are specified, the table will be updated for a single cell
-        or several depending on if match_col[match_val] ends up with one row or more than one.
-
-        If iterable match_val and update_val args are provided, THESE ITERABLES MUST BE THE SAME LENGTH.
-        Additionally, the match_col must be UNIQUE/KEY identifiers so that each match_val corresponds to ONLY one row.
-
-        progress_handler kwarg can be used to provide status updates to a callback.
-        progress_handler type can be either a callback function or a 2-tuple
-        where the first item is the callback and the second item is the "n" arg passed
-        to the sqlite3 conn.set_progress_handler function that specifies
-        the interval at which the callback is called. (# of SQLite instructions)
-        Basically, a larger "n" value reduces the number of callbacks.
-        '''
-        conn, cursor = self.connection(also_cursor=True)
-
-        if progress_handler is not None:
-            if self.db_type == 'SQLITE3':  # progress_handler only currently working for sqlite
-                conn.set_progress_handler(*progress_handler if type(progress_handler) is tuple else (progress_handler, 100))  # Can use to track progress
-            else:
-                print('progress_handler is only available for use with a SQLite database.')
-
-        sql = f'UPDATE {tablename} SET {update_col}=? WHERE {match_col}=?;'  # can't pass column names in execute statement, just values
-        if isinstance(match_val, (list, tuple)):
-            if len(match_val) != len(update_val):
-                print('ERROR!  The number of match values must equal the number of update values!')
-                return
-            for m_val, u_val in tqdm.tqdm(zip(match_val, update_val), total=len(match_val)):
-                cursor.execute(sql, (u_val, m_val))
-        else:
-            cursor.execute(sql, (update_val, match_val))
-        conn.commit()
-
-
     def table_columns_and_types(self, tablename: str) -> dict:
         '''
         Return dict of all column: type pairs in specified table.
@@ -375,58 +332,6 @@ class DataBase():
             print(f'\nUnable to create table "{tablename}"\nPerhaps the database is locked?!')
 
 
-    def delete_duplicates(self, tablename: str, grouping_columns=None):
-        '''
-        Delete duplicate rows from a db table while retaining most recently added row.
-        Duplicates are determined by grouping based on the grouping_columns kwarg (provide iterable).
-        If grouping_columns is not provided, all columns are used (rows must match perfectly).
-        '''
-        if self.db_type != 'SQLITE3':
-            print('.delete_duplicates currently only implemented for SQLite databases.')
-            return
-
-        if grouping_columns is None:
-            grouping_columns = sorted(self.table_columns_and_types(tablename).keys())
-        print(f'Deleting duplicate rows from {tablename}.  Please wait...')
-        conn, cursor = self.connection(also_cursor=True)
-        cursor.execute(f'DELETE FROM {tablename} WHERE rowid NOT IN (SELECT max(rowid) FROM {tablename} GROUP BY {", ".join(grouping_columns)})')
-        conn.commit()
-
-
-    def drop_table(self, tablename: str):
-        '''
-        Drop/delete the specified table from the database.
-        '''
-        if tablename not in self.table_names():
-            print(f'Table {tablename} does not exist; ignoring drop_table.')
-            return
-
-        if self.db_type == 'SQLITE3':
-            t0, drop_complete = time.time(), False
-            conn, cursor = self.connection(also_cursor=True)
-            while time.time() - t0 < 10:
-                try:
-                    cursor.execute(f'DROP TABLE IF EXISTS "{tablename}";')
-                    conn.commit()
-                    drop_complete = True
-                    break
-                except sqlite3.OperationalError:
-                    pass
-            conn.close()
-            if drop_complete:
-                print(f'Table "{tablename}" deleted.')
-            else:
-                print(f'Unable to drop table "{tablename}" as the database is locked!')
-        elif self.db_type == 'ACCESS':
-            conn, cursor = self.connection(also_cursor=True)
-            cursor.execute(f'DROP TABLE {tablename};')
-            conn.commit()
-            conn.close()
-            print(f'Table {tablename} deleted.')
-        else:
-            print('ERROR!  Table deletion only implemented in SQLite and Access currently.')
-
-
     def append_to_table(self, tablename: str, data: list, create_table_if_needed: bool=True, safe=False, clean_column_names=False):
         '''
         Append rows of data to database table.
@@ -486,6 +391,101 @@ class DataBase():
         conn.commit()
         conn.close()
         print(f'Data inserted in "{tablename}" -> {"{:,.0f}".format(original_data_len)} rows')
+
+
+    def update(self, tablename: str, match_col: str, match_val, update_col: str, update_val, progress_handler=None):
+        '''
+        Update a database table with a value or values.
+
+        match_col arg specifies the column used for filtering/matching rows of the table.
+        match_val is the value or values used to filter the table.  A single value, or an iterable (list or tuple) of values can be provided.
+
+        update_col is... the column to be updated.
+        update_val can be a single value or an iterable (list or tuple) of values.
+
+        If single match_val and update_val args are specified, the table will be updated for a single cell
+        or several depending on if match_col[match_val] ends up with one row or more than one.
+
+        If iterable match_val and update_val args are provided, THESE ITERABLES MUST BE THE SAME LENGTH.
+        Additionally, the match_col must be UNIQUE/KEY identifiers so that each match_val corresponds to ONLY one row.
+
+        progress_handler kwarg can be used to provide status updates to a callback.
+        progress_handler type can be either a callback function or a 2-tuple
+        where the first item is the callback and the second item is the "n" arg passed
+        to the sqlite3 conn.set_progress_handler function that specifies
+        the interval at which the callback is called. (# of SQLite instructions)
+        Basically, a larger "n" value reduces the number of callbacks.
+        '''
+        conn, cursor = self.connection(also_cursor=True)
+
+        if progress_handler is not None:
+            if self.db_type == 'SQLITE3':  # progress_handler only currently working for sqlite
+                conn.set_progress_handler(*progress_handler if type(progress_handler) is tuple else (progress_handler, 100))  # Can use to track progress
+            else:
+                print('progress_handler is only available for use with a SQLite database.')
+
+        sql = f'UPDATE {tablename} SET {update_col}=? WHERE {match_col}=?;'  # can't pass column names in execute statement, just values
+        if isinstance(match_val, (list, tuple)):
+            if len(match_val) != len(update_val):
+                print('ERROR!  The number of match values must equal the number of update values!')
+                return
+            for m_val, u_val in tqdm.tqdm(zip(match_val, update_val), total=len(match_val)):
+                cursor.execute(sql, (u_val, m_val))
+        else:
+            cursor.execute(sql, (update_val, match_val))
+        conn.commit()
+
+
+    def delete_duplicates(self, tablename: str, grouping_columns=None):
+        '''
+        Delete duplicate rows from a db table while retaining most recently added row.
+        Duplicates are determined by grouping based on the grouping_columns kwarg (provide iterable).
+        If grouping_columns is not provided, all columns are used (rows must match perfectly).
+        '''
+        if self.db_type != 'SQLITE3':
+            print('.delete_duplicates currently only implemented for SQLite databases.')
+            return
+
+        if grouping_columns is None:
+            grouping_columns = sorted(self.table_columns_and_types(tablename).keys())
+        print(f'Deleting duplicate rows from {tablename}.  Please wait...')
+        conn, cursor = self.connection(also_cursor=True)
+        cursor.execute(f'DELETE FROM {tablename} WHERE rowid NOT IN (SELECT max(rowid) FROM {tablename} GROUP BY {", ".join(grouping_columns)})')
+        conn.commit()
+
+
+    def drop_table(self, tablename: str):
+        '''
+        Drop/delete the specified table from the database.
+        '''
+        if tablename not in self.table_names():
+            print(f'Table {tablename} does not exist; ignoring drop_table.')
+            return
+
+        if self.db_type == 'SQLITE3':
+            t0, drop_complete = time.time(), False
+            conn, cursor = self.connection(also_cursor=True)
+            while time.time() - t0 < 10:
+                try:
+                    cursor.execute(f'DROP TABLE IF EXISTS "{tablename}";')
+                    conn.commit()
+                    drop_complete = True
+                    break
+                except sqlite3.OperationalError:
+                    pass
+            conn.close()
+            if drop_complete:
+                print(f'Table "{tablename}" deleted.')
+            else:
+                print(f'Unable to drop table "{tablename}" as the database is locked!')
+        elif self.db_type == 'ACCESS':
+            conn, cursor = self.connection(also_cursor=True)
+            cursor.execute(f'DROP TABLE {tablename};')
+            conn.commit()
+            conn.close()
+            print(f'Table {tablename} deleted.')
+        else:
+            print('ERROR!  Table deletion only implemented in SQLite and Access currently.')
 
 
     def copy_table(self, other_easydb, tablename: str, new_tablename: str='', column_case: str='same', progress_handler=None):
