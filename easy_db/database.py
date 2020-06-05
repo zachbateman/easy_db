@@ -86,9 +86,10 @@ class DataBase():
                 error_str = '\n  Could not locate the specified Access database.\n'
             raise FileNotFoundError(error_str)
 
+        absolute_path = os.path.abspath(self.db_location_str)  # NEED AN ABSOLUTE PATH FOR PYODBC!!!
         conn = pyodbc.connect(
             r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};" +
-            r'Dbq=' + self.db_location_str + ';')
+            r'Dbq=' + absolute_path + ';')
         if also_cursor:
             return conn, conn.cursor()
         else:
