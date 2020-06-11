@@ -47,6 +47,11 @@ class DataBase():
         '''
         Figure out what kind of databse is being used.
         '''
+        if self.db_location_str in os.environ:  # Environment Variables are case-insensitive
+            print(f'{self.db_location_str} found as Environment Variable.  Substituting database path.')
+            self.db_location_str = os.environ[self.db_location_str]
+            return self._find_db_type()
+
         if '.accdb' in self.db_location_str.lower() or '.mdb' in self.db_location_str.lower():
             return 'ACCESS'
         elif 'dsn' in self.db_location_str.lower():
@@ -146,7 +151,7 @@ class DataBase():
         Return list of dicts for rows with column names as keys.
         '''
         if not hasattr(self, '_pull_table_cache'):
-            self._pull_table_cache = {}  # provide caching dictionary if does not yet exist
+            self._pull_table_cache: dict = {}  # provide caching dictionary if does not yet exist
 
         if clear_cache:
             self._pull_table_cache = {}
@@ -232,6 +237,7 @@ class DataBase():
                 print('\nERROR - Unable to read columns.')
                 print('This may occur if using Access database with column descriptions populated.')
                 print('Try deleting the column descriptions.\n')
+                return {}
         elif self.db_type == 'SQLITE':
             conn, cursor = self.connection(also_cursor=True)
             return {col[1]: col[2].lower() for col in cursor.execute(f"PRAGMA TABLE_INFO('{tablename}');").fetchall()}
@@ -242,7 +248,7 @@ class DataBase():
             conn.close()
             if len(data) == 0:
                 print(f'No rows in {tablename}.  Please determine columns and types with another method.')
-                return None
+                return {}
             else:
                 return {key: type(value).__name__ for key, value in data[0].items()}
 
@@ -324,13 +330,13 @@ class DataBase():
                 conn.commit()
                 create_complete = True
                 break
-            except sqlite3.OperationalError as err:
+            except sqlite3.OperationalError as error:  # storing 'error' variable for printing after loop if create_complete == False
                 pass
         conn.close()
         if create_complete:
             print(f'Table {tablename} successfully created.')
         else:
-            print(err)
+            print(error)
             print(f'\nUnable to create table "{tablename}"\nPerhaps the database is locked?!')
 
 
