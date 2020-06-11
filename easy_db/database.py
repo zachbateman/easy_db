@@ -125,7 +125,8 @@ class DataBase():
 
     def pull_table(self, tablename: str, columns='all', clear_cache=False, progress_handler=None) -> list:
         '''
-        SELECT * Query for full table as specified from tablename.
+        "SELECT *" query for full table as specified from tablename.
+        ALSO WORKS for an Access Select query named tablename!
 
         Alternatively, pass tuple of column names to "columns" kwarg
         to pull the full table for ONLY those columns.
