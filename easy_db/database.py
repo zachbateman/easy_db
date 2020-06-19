@@ -434,11 +434,15 @@ class DataBase():
 
         sql = f'UPDATE {tablename} SET {update_col}=? WHERE {match_col}=?;'  # can't pass column names in execute statement, just values
         if isinstance(match_val, (list, tuple)):
-            if len(match_val) != len(update_val):
-                print('ERROR!  The number of match values must equal the number of update values!')
-                return
-            for m_val, u_val in tqdm.tqdm(zip(match_val, update_val), total=len(match_val)):
-                cursor.execute(sql, (u_val, m_val))
+            if isinstance(update_val, (list, tuple)):  # many rows to update
+                if len(match_val) != len(update_val) and not isinstance(update_val, str):  # many rows to update with same number of values
+                    print('ERROR!  The number of match values must equal the number of update values!')
+                    return
+                for m_val, u_val in tqdm.tqdm(zip(match_val, update_val), total=len(match_val)):
+                    cursor.execute(sql, (u_val, m_val))
+            else:  # case of many rows to update with same value
+                for m_val in tqdm.tqdm(match_val, total=len(match_val)):
+                    cursor.execute(sql, (update_val, m_val))
         else:
             cursor.execute(sql, (update_val, match_val))
         conn.commit()

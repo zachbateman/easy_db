@@ -81,6 +81,8 @@ class TestSQLite(unittest.TestCase):
         self.assertTrue(self.database.pull_table('UPDATE_TEST', clear_cache=True) ==  [{'c1': 1, 'c2': -2, 'c3': 3}, {'c1': 11, 'c2': 22, 'c3': 33}])
         self.database.update('UPDATE_TEST', 'c1', [1, 11], 'c3', [-3, -33])
         self.assertTrue(self.database.pull_table('UPDATE_TEST', clear_cache=True) ==  [{'c1': 1, 'c2': -2, 'c3': -3}, {'c1': 11, 'c2': 22, 'c3': -33}])
+        self.database.update('UPDATE_TEST', 'c1', [1, 11], 'c2', 0)
+        self.assertTrue(self.database.pull_table('UPDATE_TEST', clear_cache=True) == [{'c1': 1, 'c2': 0, 'c3': -3}, {'c1': 11, 'c2': 0, 'c3': -33}])
         self.database.drop_table('UPDATE_TEST')
 
 
