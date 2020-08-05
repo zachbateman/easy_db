@@ -232,7 +232,7 @@ class DataBase():
         return sorted(tables)
 
 
-    def table_columns_and_types(self, tablename: str) -> dict:
+    def columns_and_types(self, tablename: str) -> dict:
         '''
         Return dict of all column: type pairs in specified table.
         '''
@@ -379,7 +379,7 @@ class DataBase():
             print('Use create_table_if_needed=True if you would like to create it.')
             return None
 
-        columns = [col for col in self.table_columns_and_types(tablename)]
+        columns = [col for col in self.columns_and_types(tablename)]
         data_cols = [col for col in data[0]]
         if data_cols != columns:
             try:
@@ -465,6 +465,30 @@ class DataBase():
         conn.commit()
 
 
+    def add_column(self, tablename: str, new_col: str, new_type='str'):
+        '''Add a new column to a database table.'''
+        if new_col in self.columns_and_types(tablename):
+            print(f'Column {new_col} is already in {tablename}!')
+            return
+        if new_type == 'str':
+            new_type = 'varchar(255)' if self.db_type == 'ACCESS' else 'TEXT'
+        conn, cursor = self.connection(also_cursor=True)
+        cursor.execute(f'ALTER TABLE {tablename} ADD COLUMN {new_col} {new_type};')
+        conn.commit()
+        print(f'Column {new_col} added to {tablename}.')
+
+
+    def drop_column(self, tablename: str, column: str):
+        '''Remove a column from a database table.'''
+        if column not in self.columns_and_types(tablename):
+            print(f'Column {column} does not exist in {tablename}.')
+            return
+        conn, cursor = self.connection(also_cursor=True)
+        cursor.execute(f'ALTER TABLE {tablename} DROP COLUMN "{column}";')
+        conn.commit()
+        print(f'Column {column} removed from {tablename}')
+
+
     def delete_duplicates(self, tablename: str, grouping_columns=None):
         '''
         Delete duplicate rows from a db table while retaining most recently added row.
@@ -476,7 +500,7 @@ class DataBase():
             return
 
         if grouping_columns is None:
-            grouping_columns = sorted(self.table_columns_and_types(tablename).keys())
+            grouping_columns = sorted(self.columns_and_types(tablename).keys())
         print(f'Deleting duplicate rows from {tablename}.  Please wait...')
         conn, cursor = self.connection(also_cursor=True)
         cursor.execute(f'DELETE FROM {tablename} WHERE rowid NOT IN (SELECT max(rowid) FROM {tablename} GROUP BY {", ".join(grouping_columns)})')
@@ -539,15 +563,15 @@ class DataBase():
         '''
         data = other_easydb.pull_table(tablename, clear_cache=True, progress_handler=progress_handler)  # clearing cache to ensure fresh pull
         if column_case.lower() == 'lower':
-            columns_and_types = {key.lower(): val for key, val in other_easydb.table_columns_and_types(tablename).items()}
+            columns_and_types = {key.lower(): val for key, val in other_easydb.columns_and_types(tablename).items()}
             table_data = [{col.lower(): val for col, val in d.items()} for d in data]
         elif column_case.lower() == 'upper':
-            columns_and_types = {key.upper(): val for key, val in other_easydb.table_columns_and_types(tablename).items()}
+            columns_and_types = {key.upper(): val for key, val in other_easydb.columns_and_types(tablename).items()}
             table_data = [{col.upper(): val for col, val in d.items()} for d in data]
         else:
             if column_case.lower() != 'same':
                 print('Warning!  .copy_table column_case kwarg must be "same", "upper", or "lower".  Defaulting to "same".')
-            columns_and_types = other_easydb.table_columns_and_types(tablename)
+            columns_and_types = other_easydb.columns_and_types(tablename)
             table_data = data
 
         if new_tablename != '':
