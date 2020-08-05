@@ -360,6 +360,10 @@ class DataBase():
 
         "data" arg is list of row dicts where each row dict contains all columns as keys.
         '''
+        if not data:  # check to ensure provided data actually contains rows of data
+            print('No data provided to append.')
+            return
+
         if clean_column_names:
             print('Cleaning column names in data to be appended.')
             data_keys = list(data[0].keys())
@@ -550,7 +554,8 @@ class DataBase():
             tablename = new_tablename
         self.drop_table(tablename)
         self.create_table(tablename, columns_and_types)
-        self.append_to_table(tablename, table_data)
+        if table_data:
+            self.append_to_table(tablename, table_data)
         print(f'Table {tablename} copied!')
 
 
