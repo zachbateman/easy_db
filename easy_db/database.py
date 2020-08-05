@@ -110,6 +110,14 @@ class DataBase():
         else:
             return conn
 
+    @property
+    def size(self):
+        '''Return size of database in GB'''
+        if self.db_type in ['SQLITE', 'ACCESS']:
+            return round(os.path.getsize(self.db_location_str) / 10 ** 9, 2)
+        else:
+            print('db.size only works for SQLite and Access databases!')
+
 
     def compact_db(self) -> None:
         '''
