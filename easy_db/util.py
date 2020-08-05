@@ -34,7 +34,7 @@ def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str, par
     '''
     try:
         data = cursor.execute(sql, parameters).fetchall()
-    except (sqlite3.OperationalError, pyodbc.ProgrammingError) as error:
+    except (sqlite3.OperationalError, pyodbc.ProgrammingError, pyodbc.Error) as error:
         print(f'ERROR querying table {tablename}!  Error below:')
         print(error)
         print(f'SQL: {sql}')
@@ -52,8 +52,7 @@ def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str, par
             print('This may occur if using Access database with column descriptions populated.')
             print('Try deleting the column descriptions.\n')
             return [{}]
-    table_data = [dict(zip(columns, row)) for row in data]
-    return table_data
+    return [dict(zip(columns, row)) for row in data]  # table data
 
 
 # set for quickly checking possibly malicious characters

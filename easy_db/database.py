@@ -277,6 +277,9 @@ class DataBase():
                         'text': 'varchar(255)',
                         'varchar': 'varchar(255)',
                         'datetime': 'datetime',
+                        'smallint': 'integer',
+                        None: 'varchar(255)',
+                        'NoneType': 'varchar(255)',
                         }
         elif self.db_type == 'SQLITE':
             type_map = {float: 'REAL',
@@ -295,6 +298,9 @@ class DataBase():
                         'date': 'DATE',
                         'datetime': 'DATE',
                         'longchar': 'TEXT',
+                        'smallint': 'INTEGER',
+                        None: 'TEXT',
+                        'NoneType': 'TEXT',
                         }
         else:
             print('ERROR!  Table creation only implemented in SQLite and Access currently.')
