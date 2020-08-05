@@ -7,7 +7,6 @@ import os
 import time
 import random
 from functools import lru_cache
-from functools import wraps
 import tqdm
 import easy_multip
 from . import util
@@ -124,7 +123,7 @@ class DataBase():
             conn.execute('VACUUM')
             conn.close()
         else:
-            print(f'compact_db() only implemented for SQLite.')
+            print('compact_db() only implemented for SQLite.')
             print(f'Current database is: {self.db_type}')
 
 
@@ -372,7 +371,7 @@ class DataBase():
         data_cols = [col for col in data[0]]
         if data_cols != columns:
             try:
-                data = [{col: d[col]  for col in columns} for d in data]
+                data = [{col: d[col] for col in columns} for d in data]
                 print('Append data column order adjusted to match db table column order.')
             except KeyError:
                 print(f'Error!  Table {tablename} columns do not match the keys of the data to be appended.')
