@@ -18,6 +18,7 @@ class DataBase():
 
     def __init__(self, db_location_str: str='', create_if_none: bool=True) -> None:
         self.db_location_str = db_location_str
+        self._pull_table_cache: dict = {}
 
         self.db_type = self._find_db_type()
         if self.db_type == 'ACCESS':
@@ -157,9 +158,6 @@ class DataBase():
 
         Return list of dicts for rows with column names as keys.
         '''
-        if not hasattr(self, '_pull_table_cache'):
-            self._pull_table_cache: dict = {}  # provide caching dictionary if does not yet exist
-
         if clear_cache:
             self._pull_table_cache = {}
             return self.pull_table(tablename, columns)
@@ -417,6 +415,7 @@ class DataBase():
         pbar.close()
         conn.commit()
         conn.close()
+        self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
         print(f'Data inserted in "{tablename}" -> {"{:,.0f}".format(original_data_len)} rows')
 
 
@@ -465,6 +464,7 @@ class DataBase():
         else:
             cursor.execute(sql, (update_val, match_val))
         conn.commit()
+        self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
 
 
     def add_column(self, tablename: str, new_col: str, new_type='str'):
@@ -478,6 +478,7 @@ class DataBase():
         cursor.execute(f'ALTER TABLE {tablename} ADD COLUMN {new_col} {new_type};')
         conn.commit()
         print(f'Column {new_col} added to {tablename}.')
+        self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
 
 
     def drop_column(self, tablename: str, column: str):
@@ -489,6 +490,7 @@ class DataBase():
         cursor.execute(f'ALTER TABLE {tablename} DROP COLUMN "{column}";')
         conn.commit()
         print(f'Column {column} removed from {tablename}')
+        self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
 
 
     def delete_duplicates(self, tablename: str, grouping_columns=None):
@@ -507,6 +509,7 @@ class DataBase():
         conn, cursor = self.connection(also_cursor=True)
         cursor.execute(f'DELETE FROM {tablename} WHERE rowid NOT IN (SELECT max(rowid) FROM {tablename} GROUP BY {", ".join(grouping_columns)})')
         conn.commit()
+        self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
 
 
     def create_index(self, tablename: str, column: str, index_name: str='', unique: bool=False):
@@ -555,6 +558,9 @@ class DataBase():
             print(f'Table {tablename} deleted.')
         else:
             print('ERROR!  Table deletion only implemented in SQLite and Access currently.')
+            return
+
+        self._pull_table_cache.pop(tablename, None)  # clear cache for this table as table has been dropped
 
 
     def copy_table(self, other_easydb, tablename: str, new_tablename: str='', column_case: str='same', progress_handler=None):
