@@ -67,7 +67,7 @@ class DataBase():
         '''
         db_file_exists = True if os.path.isfile(self.db_location_str) else False
         if db_file_exists or create_if_none:
-            conn = sqlite3.connect(self.db_location_str)
+            conn = sqlite3.connect(self.db_location_str, detect_types=sqlite3.PARSE_DECLTYPES)
             if also_cursor:
                 return conn, conn.cursor()
             else:
