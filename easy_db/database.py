@@ -111,6 +111,7 @@ class DataBase():
         else:
             return conn
 
+
     @property
     def size(self):
         '''Return size of database in GB'''
@@ -285,7 +286,7 @@ class DataBase():
                         'timestamp': 'datetime',
                         'smallint': 'integer',
                         None: 'varchar(255)',
-                        'NoneType': 'varchar(255)',
+                        'nonetype': 'varchar(255)',
                         }
         elif self.db_type == 'SQLITE':
             type_map = {float: 'REAL',
@@ -307,7 +308,7 @@ class DataBase():
                         'longchar': 'TEXT',
                         'smallint': 'INTEGER',
                         None: 'TEXT',
-                        'NoneType': 'TEXT',
+                        'nonetype': 'TEXT',
                         }
         else:
             print('ERROR!  Table creation only implemented in SQLite and Access currently.')
