@@ -443,6 +443,13 @@ class DataBase():
         the interval at which the callback is called. (# of SQLite instructions)
         Basically, a larger "n" value reduces the number of callbacks.
         '''
+        # Abort update if match or update column does not exist in the table (may be misspelled or just missing)
+        table_columns = set(self.columns_and_types(tablename).keys())
+        for col in (match_col, update_col):
+            if col not in table_columns:
+                print(f'UPDATE FAILED!  Column "{col}" not in {tablename}.')
+                return
+
         conn, cursor = self.connection(also_cursor=True)
 
         if progress_handler is not None:
