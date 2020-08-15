@@ -14,6 +14,14 @@ class TestSQLite(unittest.TestCase):
         print(self.database.db_type)
         self.assertTrue(self.database.db_type == 'SQLITE')
 
+    def test_size(self):
+        self.assertTrue(self.database.size > 0)
+        
+    def test_cols_types(self):
+        cols_types = self.database.columns_and_types('TEST_TABLE')
+        self.assertTrue(isinstance(cols_types, dict))
+        self.assertTrue(len(cols_types) > 0)
+
     def test_tablename_pull(self):
         tables = self.database.table_names()
         print(tables)
@@ -84,6 +92,8 @@ class TestSQLite(unittest.TestCase):
         self.database.update('UPDATE_TEST', 'c1', [1, 11], 'c2', 0)
         self.assertTrue(self.database.pull_table('UPDATE_TEST', clear_cache=True) == [{'c1': 1, 'c2': 0, 'c3': -3}, {'c1': 11, 'c2': 0, 'c3': -33}])
         self.database.drop_table('UPDATE_TEST')
+
+
 
 
 
