@@ -1,12 +1,14 @@
 # easy_db
 
-easy_db is a tool designed to quickly allow Python database interaction capabilities from a consolidated, intuitive user interface provided by the "DataBase" class.
+easy_db is a high-level Python library designed to simplify working with databases.  The "DataBase" class handles connecting to various
+types of databases while providing simple methods for common tasks.  The underlying database connection and cursor can be used when more
+precise control is desired.
 
 # Goals
 
- - Make common database tasks very easy
+ - Make common database tasks simple and easy
  - Intelligently handle different database types
- - Provide intuitive, consistent, Pythonic methods for accessing data
+ - Provide intuitive, consistent, Pythonic methods database interaction
  - Provide good performance without requiring polished query code
  - Expose database connection and cursor to users wanting fine-grained control
  - Just get the data into Python so we can use it!
