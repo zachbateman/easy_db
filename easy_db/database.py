@@ -8,7 +8,6 @@ import time
 import random
 from functools import lru_cache
 import tqdm
-import easy_multip
 from . import util
 
 

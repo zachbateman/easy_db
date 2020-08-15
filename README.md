@@ -28,7 +28,7 @@ tables = db.table_names()
 
 Table columns and types are simple to investigate.
 ```sh
-print(db.table_columns_and_types('example_table'))
+print(db.columns_and_types('example_table'))
 ```
 
 Let's pull all of the data from a table.  We could start with something like "SELECT * ..." but this is way more fun:
@@ -44,18 +44,21 @@ import pandas
 df = pandas.DataFrame(data)
 ```
 
-
-Now perhaps we have an Access database and would like to pull in a table from our SQLite database.  easy_db makes this quick and easy and gracefully handles the nuances of dealing with the different databases.
+Now perhaps we have an Access database and would like to pull in a table from our SQLite database.  easy_db makes this simple and gracefully handles the nuances of dealing with the different databases.
 ```sh
-import easy_db
-
 db = easy_db.DataBase('test_sqlite3_db.db')
 db_2 = easy_db.DataBase('test_access_db.accdb')
 
 db_2.copy_table(db, 'example_table')
 ```
 
-Thanks for checking out easy_db, and please take a look at the methods of the DataBase class if you'd like to see what other capabilities are currently available!
+The DataBase object can be used as a context manager for running custom SQL.  The cursor is provided and the connection runs .commit() and .close() implicitly after the "while" block.
+```
+with db as cursor:
+    cursor.execute('DELETE * FROM example_table;')
+```
+
+Thanks for checking out easy_db, and please take a look at the methods of the DataBase class if you'd like to see what other capabilities are available!
 
 
 License
