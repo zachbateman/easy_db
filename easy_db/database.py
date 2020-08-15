@@ -613,3 +613,13 @@ class DataBase():
 
     def __repr__(self) -> str:
         return f'DataBase: {self.db_location_str}'
+
+
+    def __enter__(self):
+        self.context_conn, cursor = self.connection(also_cursor=True)
+        return cursor
+
+
+    def __exit__(self, *args):
+        self.context_conn.commit()
+        self.context_conn.close()

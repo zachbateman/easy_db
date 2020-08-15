@@ -8,35 +8,35 @@ import easy_db
 class TestSQLite(unittest.TestCase):
 
     def setUp(self):
-        self.database = easy_db.DataBase('test_sqlite3_db.db')
+        self.db = easy_db.DataBase('test_sqlite3_db.db')
 
     def test_dbtype(self):
-        print(self.database.db_type)
-        self.assertTrue(self.database.db_type == 'SQLITE')
+        print(self.db.db_type)
+        self.assertTrue(self.db.db_type == 'SQLITE')
 
     def test_size(self):
-        self.assertTrue(self.database.size > 0)
-        
+        self.assertTrue(self.db.size > 0)
+
     def test_cols_types(self):
-        cols_types = self.database.columns_and_types('TEST_TABLE')
+        cols_types = self.db.columns_and_types('TEST_TABLE')
         self.assertTrue(isinstance(cols_types, dict))
         self.assertTrue(len(cols_types) > 0)
 
     def test_tablename_pull(self):
-        tables = self.database.table_names()
+        tables = self.db.table_names()
         print(tables)
         self.assertTrue(len(tables) == 3)
         self.assertTrue(tables == sorted(tables))
 
     def test_full_table_pull(self):
-        test_table_data = self.database.pull_table('TEST_TABLE')
+        test_table_data = self.db.pull_table('TEST_TABLE')
         print(test_table_data[0])
         self.assertTrue(type(test_table_data) == list)
         self.assertTrue(type(test_table_data[0]) == dict)
         self.assertTrue(len(test_table_data) == 31)
 
     def test_full_table_pull_specific_columns(self):
-        test_table_data = self.database.pull_table('TEST_TABLE', columns=('row_id', 'value_1'))
+        test_table_data = self.db.pull_table('TEST_TABLE', columns=('row_id', 'value_1'))
         print(test_table_data[0])
         self.assertTrue(type(test_table_data) == list)
         self.assertTrue(type(test_table_data[0]) == dict)
@@ -44,55 +44,60 @@ class TestSQLite(unittest.TestCase):
         self.assertTrue(len(test_table_data[0].keys()) == 2)
 
     def test_pull_where_id_in_list(self):
-        test_pulled_data = self.database.pull_table_where_id_in_list('THIRD_TABLE', 'parameter', [0.66, 0.67], use_multip=False)
+        test_pulled_data = self.db.pull_table_where_id_in_list('THIRD_TABLE', 'parameter', [0.66, 0.67], use_multip=False)
         self.assertTrue(len(test_pulled_data) == 116)
         self.assertTrue(all(d['parameter'] in [0.66, 0.67] for d in test_pulled_data))
 
     def test_table_creation_and_deletion(self):
-        self.database.create_table('TEST_TABLE_CREATION', {'col_1': str, 'col_2': float})
-        self.database.append_to_table('TEST_TABLE_CREATION', [{'col_1': 'row_A', 'col_2': 1.5}, {'col_1': 'row_B', 'col_2': 3.7}])
-        self.database.drop_table('TEST_TABLE_CREATION')
+        self.db.create_table('TEST_TABLE_CREATION', {'col_1': str, 'col_2': float})
+        self.db.append_to_table('TEST_TABLE_CREATION', [{'col_1': 'row_A', 'col_2': 1.5}, {'col_1': 'row_B', 'col_2': 3.7}])
+        self.db.drop_table('TEST_TABLE_CREATION')
         self.assertTrue(True)
 
     def test_table_creation_bad_types(self):
-        self.database.create_table('BAD_TYPES', {'col_1': str, 'col_2': str, 'col_3': 'bad_type', 'col_3': tuple()})
-        self.assertTrue('BAD_TYPES' not in self.database.table_names())
+        self.db.create_table('BAD_TYPES', {'col_1': str, 'col_2': str, 'col_3': 'bad_type', 'col_3': tuple()})
+        self.assertTrue('BAD_TYPES' not in self.db.table_names())
 
     def test_progress_callback(self):
         callback = lambda *args: print('Making progress...')
-        data = self.database.pull_table('THIRD_TABLE', progress_handler=callback)
+        data = self.db.pull_table('THIRD_TABLE', progress_handler=callback)
 
     def test_progress_callback_with_n(self):
         callback = lambda *args: print('Making progress 2...')
-        data = self.database.pull_table('THIRD_TABLE', progress_handler=(callback, 1000))
+        data = self.db.pull_table('THIRD_TABLE', progress_handler=(callback, 1000))
 
     def test_duplicate_deletion(self):
         data = [{'c1': 5, 'c2': 6, 'c3': 7, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 7, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 3, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 3, 'c4': 8}]
-        self.database.drop_table('DUP_TABLE')
-        self.database.append_to_table('DUP_TABLE', data)
-        self.assertTrue(self.database.pull_table('DUP_TABLE') == data)
-        self.database.delete_duplicates('DUP_TABLE')
-        self.assertTrue(self.database.pull_table('DUP_TABLE', clear_cache=True) == data[:3])
-        self.database.delete_duplicates('DUP_TABLE', grouping_columns=['c1', 'c2'])
-        self.assertTrue(len(self.database.pull_table('DUP_TABLE', clear_cache=True)) == 2)
-        self.database.append_to_table('DUP_TABLE', data)
-        self.database.delete_duplicates('DUP_TABLE', grouping_columns=['c1'])
-        self.assertTrue(len(self.database.pull_table('DUP_TABLE', clear_cache=True)) == 1)
-        self.database.drop_table('DUP_TABLE')
+        self.db.drop_table('DUP_TABLE')
+        self.db.append_to_table('DUP_TABLE', data)
+        self.assertTrue(self.db.pull_table('DUP_TABLE') == data)
+        self.db.delete_duplicates('DUP_TABLE')
+        self.assertTrue(self.db.pull_table('DUP_TABLE', clear_cache=True) == data[:3])
+        self.db.delete_duplicates('DUP_TABLE', grouping_columns=['c1', 'c2'])
+        self.assertTrue(len(self.db.pull_table('DUP_TABLE', clear_cache=True)) == 2)
+        self.db.append_to_table('DUP_TABLE', data)
+        self.db.delete_duplicates('DUP_TABLE', grouping_columns=['c1'])
+        self.assertTrue(len(self.db.pull_table('DUP_TABLE', clear_cache=True)) == 1)
+        self.db.drop_table('DUP_TABLE')
 
     def test_update(self):
         data = [{'c1': 1, 'c2': 2, 'c3': 3}, {'c1': 11, 'c2': 22, 'c3': 33}]
-        self.database.drop_table('UPDATE_TEST')
-        self.database.append_to_table('UPDATE_TEST', data)
-        self.assertTrue(data == self.database.pull_table('UPDATE_TEST'))
-        self.database.update('UPDATE_TEST', 'c1', 1, 'c2', -2)
-        self.assertTrue(self.database.pull_table('UPDATE_TEST', clear_cache=True) ==  [{'c1': 1, 'c2': -2, 'c3': 3}, {'c1': 11, 'c2': 22, 'c3': 33}])
-        self.database.update('UPDATE_TEST', 'c1', [1, 11], 'c3', [-3, -33])
-        self.assertTrue(self.database.pull_table('UPDATE_TEST', clear_cache=True) ==  [{'c1': 1, 'c2': -2, 'c3': -3}, {'c1': 11, 'c2': 22, 'c3': -33}])
-        self.database.update('UPDATE_TEST', 'c1', [1, 11], 'c2', 0)
-        self.assertTrue(self.database.pull_table('UPDATE_TEST', clear_cache=True) == [{'c1': 1, 'c2': 0, 'c3': -3}, {'c1': 11, 'c2': 0, 'c3': -33}])
-        self.database.drop_table('UPDATE_TEST')
+        self.db.drop_table('UPDATE_TEST')
+        self.db.append_to_table('UPDATE_TEST', data)
+        self.assertTrue(data == self.db.pull_table('UPDATE_TEST'))
+        self.db.update('UPDATE_TEST', 'c1', 1, 'c2', -2)
+        self.assertTrue(self.db.pull_table('UPDATE_TEST', clear_cache=True) ==  [{'c1': 1, 'c2': -2, 'c3': 3}, {'c1': 11, 'c2': 22, 'c3': 33}])
+        self.db.update('UPDATE_TEST', 'c1', [1, 11], 'c3', [-3, -33])
+        self.assertTrue(self.db.pull_table('UPDATE_TEST', clear_cache=True) ==  [{'c1': 1, 'c2': -2, 'c3': -3}, {'c1': 11, 'c2': 22, 'c3': -33}])
+        self.db.update('UPDATE_TEST', 'c1', [1, 11], 'c2', 0)
+        self.assertTrue(self.db.pull_table('UPDATE_TEST', clear_cache=True) == [{'c1': 1, 'c2': 0, 'c3': -3}, {'c1': 11, 'c2': 0, 'c3': -33}])
+        self.db.drop_table('UPDATE_TEST')
 
+    def test_context_manager(self):
+        with self.db as cursor:
+            cursor.execute('SELECT * FROM TEST_TABLE;')
+            data = cursor.fetchall()
+        self.assertTrue(len(data)>0)
 
 
 
@@ -100,7 +105,7 @@ class TestSQLite(unittest.TestCase):
 class TestUtil(unittest.TestCase):
 
     def setUp(self):
-        self.database = easy_db.DataBase('test_sqlite3_db.db')
+        self.db = easy_db.DataBase('test_sqlite3_db.db')
 
     def test_name_clean(self):
         self.assertTrue(easy_db.util.name_clean('table'))
@@ -111,9 +116,9 @@ class TestUtil(unittest.TestCase):
         self.assertFalse(easy_db.util.name_clean('drop'))
 
     def test_malicious_query(self):
-        data = self.database.pull_table('DROP TABLE TEST_TABLE')
+        data = self.db.pull_table('DROP TABLE TEST_TABLE')
         self.assertTrue(data is None)
-        data = self.database.pull_table('TEST_TABLE', columns=('row_id;1=1;--', 'value_1'))
+        data = self.db.pull_table('TEST_TABLE', columns=('row_id;1=1;--', 'value_1'))
         self.assertTrue(data is None)
 
 
