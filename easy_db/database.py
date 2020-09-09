@@ -28,7 +28,8 @@ class DataBase():
             except pyodbc.Error as error:
                 print(error)
                 print(f'\nERROR with pyodbc!  Unable to connect to Access Database: {self.db_location_str}')
-                print('Try checking to ensure consistent 64 or 32 bitness between your Python install and your Access driver.\n\n')
+                print('Try checking to ensure consistent 64 or 32 bitness between your Python install and your Access driver.')
+                print('If all else fails, try uninstalling and then reinstalling your Microsoft Access driver(s)...\n\n')
         elif self.db_type == 'SQL SERVER':
             self.connection = self._connection_sql_server
         elif self.db_type == 'SQLITE':
