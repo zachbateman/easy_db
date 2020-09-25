@@ -288,7 +288,7 @@ class DataBase():
                 print(f'No rows in {tablename}.  Please determine columns and types with another method.')
                 return {}
             else:
-                return {key: type(value).__name__ for key, value in data[0].items()}
+                return {key: type(value).__name__.lower() for key, value in data[0].items()}
 
 
     def create_table(self, tablename: str, columns_and_types: dict, force_overwrite: bool=False):
@@ -346,7 +346,7 @@ class DataBase():
             print('ERROR!  Table creation only implemented in SQLite and Access currently.')
             return
 
-        columns_and_types = {util.clean_column_name(col): v for col, v in columns_and_types.items()}  # make sure column names are good
+        columns_and_types = {util.clean_column_name(col): v.lower() if isinstance(v, str) else v for col, v in columns_and_types.items()}  # make sure column names are good
         try:
             column_types = ', '.join([f'{col} {type_map[v]}' for col, v in columns_and_types.items()])
         except KeyError:
