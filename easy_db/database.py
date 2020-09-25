@@ -142,7 +142,7 @@ class DataBase():
                 print('Error importing "win32com.client" which is used to compact & repair Access db.')
                 print('Try "pip install pywin32", and see if that fixes the issue.')
             access_app = win32com.client.Dispatch("Access.Application")
-            dest_path = os.path.join(os.path.dirname(self.db_location_str), 'DB_compacted' + '.mdb' if '.mdb' in self.db_location_str else '.accdb')
+            dest_path = os.path.join(os.path.dirname(self.db_location_str), 'DB_compacted.mdb' if '.mdb' in self.db_location_str else 'DB_compacted.accdb')
             successful = access_app.CompactRepair(self.db_location_str, dest_path)
             if successful:
                 print('Compact & Repair SUCCESSFUL')

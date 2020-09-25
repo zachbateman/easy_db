@@ -5,7 +5,7 @@ with open('README.md', 'r') as f:
 
 setuptools.setup(
     name='easy_db',
-    version='0.7.9',
+    version='0.7.10',
     packages=['easy_db'],
     license='MIT',
     author='Zach Bateman',
@@ -13,7 +13,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/zachbateman/easy_db.git',
-    download_url='https://github.com/zachbateman/easy_db/archive/v_0.7.9.tar.gz',
+    download_url='https://github.com/zachbateman/easy_db/archive/v_0.7.10.tar.gz',
     keywords=['DATABASE', 'SIMPLE', 'EASY'],
     install_requires=['pyodbc', 'tqdm'],
     classifiers=['Development Status :: 3 - Alpha',
