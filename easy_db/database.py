@@ -9,6 +9,7 @@ import random
 from functools import lru_cache
 import tqdm
 from . import util
+# hidden import below: win32com (pip install pywin32) only needed for .compact_db if using Access db.
 
 
 
@@ -123,8 +124,10 @@ class DataBase():
 
     def compact_db(self) -> None:
         '''
-        Use "VACUUM" command to defragment and shrink sqlite database.
+        Uses "VACUUM" command to defragment and shrink SQLite database.
+        Uses "Compact & Repair" utility of Access database.
         This can have a big impact after deleting many tables.
+
         Previous sqlite3 bug requiring connection kwarg
         isolation_level=None appears to be fixed.
         '''
@@ -132,8 +135,25 @@ class DataBase():
             conn = self.connection()
             conn.execute('VACUUM')
             conn.close()
+        elif self.db_type == 'ACCESS':
+            try:
+                import win32com.client
+            except ModuleNotFoundError:
+                print('Error importing "win32com.client" which is used to compact & repair Access db.')
+                print('Try "pip install pywin32", and see if that fixes the issue.')
+            access_app = win32com.client.Dispatch("Access.Application")
+            dest_path = os.path.join(os.path.dirname(self.db_location_str), 'DB_compacted' + '.mdb' if '.mdb' in self.db_location_str else '.accdb')
+            successful = access_app.CompactRepair(self.db_location_str, dest_path)
+            if successful:
+                print('Compact & Repair SUCCESSFUL')
+                os.remove(self.db_location_str)
+                os.rename(dest_path, self.db_location_str)
+            else:
+                print('Compact & Repair FAILED')
+                os.remove(dest_path)
+            access_app = None
         else:
-            print('compact_db() only implemented for SQLite.')
+            print('compact_db() only implemented for SQLite and Access databases.')
             print(f'Current database is: {self.db_type}')
 
 
