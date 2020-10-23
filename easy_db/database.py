@@ -157,6 +157,11 @@ class DataBase():
             print(f'Current database is: {self.db_type}')
 
 
+    def pull(self, *args, **kwargs) -> list:
+        '''Shorthand for pull_table'''
+        return self.pull_table(*args, **kwargs)
+
+
     def pull_table(self, tablename: str, columns='all', clear_cache=False, progress_handler=None) -> list:
         '''
         "SELECT *" query for full table as specified from tablename.

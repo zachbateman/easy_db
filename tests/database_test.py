@@ -35,6 +35,13 @@ class TestSQLite(unittest.TestCase):
         self.assertTrue(type(test_table_data[0]) == dict)
         self.assertTrue(len(test_table_data) == 31)
 
+    def test_full_table_pull2(self):
+        test_table_data = self.db.pull('TEST_TABLE')
+        print(test_table_data[0])
+        self.assertTrue(type(test_table_data) == list)
+        self.assertTrue(type(test_table_data[0]) == dict)
+        self.assertTrue(len(test_table_data) == 31)
+
     def test_full_table_pull_specific_columns(self):
         test_table_data = self.db.pull_table('TEST_TABLE', columns=('row_id', 'value_1'))
         print(test_table_data[0])
