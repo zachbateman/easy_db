@@ -306,48 +306,8 @@ class DataBase():
         force_overwrite kwarg allows to overwrite existing table if present
         (by default will NOT overwrite/change existing table.)
         '''
-        if self.db_type == 'ACCESS':
-            type_map = {float: 'double',
-                        'float': 'double',
-                        'double': 'double',
-                        'float64': 'double',
-                        'numpy.float64': 'double',
-                        int: 'integer',
-                        'int': 'integer',
-                        'integer': 'integer',
-                        str: 'varchar(255)',
-                        'str': 'varchar(255)',
-                        'text': 'varchar(255)',
-                        'varchar': 'varchar(255)',
-                        'datetime': 'datetime',
-                        'timestamp': 'datetime',
-                        'smallint': 'integer',
-                        None: 'varchar(255)',
-                        'nonetype': 'varchar(255)',
-                        }
-        elif self.db_type == 'SQLITE':
-            type_map = {float: 'REAL',
-                        'float': 'REAL',
-                        'double': 'REAL',
-                        'real': 'REAL',
-                        'float64': 'REAL',
-                        'numpy.float64': 'REAL',
-                        int: 'INTEGER',
-                        'int': 'INTEGER',
-                        'integer': 'INTEGER',
-                        str: 'TEXT',
-                        'str': 'TEXT',
-                        'text': 'TEXT',
-                        'varchar': 'TEXT',
-                        'date': 'DATE',
-                        'datetime': 'DATE',
-                        'timestamp': 'TIMESTAMP',
-                        'longchar': 'TEXT',
-                        'smallint': 'INTEGER',
-                        None: 'TEXT',
-                        'nonetype': 'TEXT',
-                        }
-        else:
+        type_map = util.type_map(self.db_type)
+        if not type_map:
             print('ERROR!  Table creation only implemented in SQLite and Access currently.')
             return
 
@@ -391,12 +351,15 @@ class DataBase():
             print(f'\nUnable to create table "{tablename}"\nPerhaps the database is locked?!')
 
 
-    def append_to_table(self, tablename: str, data: list, create_table_if_needed: bool=True, safe=False, clean_column_names=False):
+    def append_to_table(self, tablename: str, data: list, create_table_if_needed: bool=True, safe=False, clean_column_names=False, robust: bool=True):
         '''
         Append rows of data to database table.
         Create the table in the database if it doesn't exist if create_table_if_needed is True
 
         "data" arg is list of row dicts where each row dict contains all columns as keys.
+
+        "robust" kwarg enables automatic data cleaning (type conversions, null, missing columns) if True.
+        Setting robust to False improves speed if using clean input data.
         '''
         if not data:  # check to ensure provided data actually contains rows of data
             print('No data provided to append.')
@@ -417,6 +380,9 @@ class DataBase():
             print('Use create_table_if_needed=True if you would like to create it.')
             return None
 
+        if robust:
+            data = util.clean_data(data, self.columns_and_types(tablename), self.db_type)
+
         columns = [col for col in self.columns_and_types(tablename)]
         data_cols = [col for col in data[0]]
         if data_cols != columns:
@@ -435,7 +401,6 @@ class DataBase():
         insert_many_sql = insert_sql + f"({', '.join(['?' for _ in range(len(columns))])});"
 
         conn, cursor = self.connection(also_cursor=True)
-
         pbar = tqdm.tqdm(total=len(data))
         original_data_len = len(data)
         while len(data) > 0:

@@ -7,6 +7,56 @@ from typing import List, Dict, Any
 
 
 
+def type_map(db_type) -> dict:
+    '''
+    Return dict of Python types as keys and appropriate
+    database types as values based on the provided db_type.
+    '''
+    if db_type == 'ACCESS':
+        return {float: 'double',
+                    'float': 'double',
+                    'double': 'double',
+                    'float64': 'double',
+                    'numpy.float64': 'double',
+                    int: 'integer',
+                    'int': 'integer',
+                    'integer': 'integer',
+                    str: 'varchar(255)',
+                    'str': 'varchar(255)',
+                    'text': 'varchar(255)',
+                    'varchar': 'varchar(255)',
+                    'datetime': 'datetime',
+                    'timestamp': 'datetime',
+                    'smallint': 'integer',
+                    None: 'varchar(255)',
+                    'nonetype': 'varchar(255)',
+                    }
+    elif db_type == 'SQLITE':
+        return {float: 'REAL',
+                    'float': 'REAL',
+                    'double': 'REAL',
+                    'real': 'REAL',
+                    'float64': 'REAL',
+                    'numpy.float64': 'REAL',
+                    int: 'INTEGER',
+                    'int': 'INTEGER',
+                    'integer': 'INTEGER',
+                    str: 'TEXT',
+                    'str': 'TEXT',
+                    'text': 'TEXT',
+                    'varchar': 'TEXT',
+                    'date': 'DATE',
+                    'datetime': 'DATE',
+                    'timestamp': 'TIMESTAMP',
+                    'longchar': 'TEXT',
+                    'smallint': 'INTEGER',
+                    None: 'TEXT',
+                    'nonetype': 'TEXT',
+                    }
+    else:
+        return {}
+
+
 def check_if_file_is_sqlite(filename: str) -> bool:
     '''
     Check if file is a sqlite database.
@@ -92,3 +142,70 @@ def clean_column_name(col_name: str) -> str:
     if changed:
         print(f'Column Name {original_col_name} changed to {col_name}')
     return col_name
+
+
+def clean_data(data, columns_and_types, db_type) -> List[dict]:
+    '''
+    Best effort to clean list of dicts representing database table rows to handle mismatched types,
+    null values, and missing columns.
+    '''
+    columns, types = list(columns_and_types.keys()), list(columns_and_types.values())
+    num_col = len(columns)
+    t_map = type_map(db_type)
+
+    for d in data:
+        if len(d) != num_col:  # correct missing or extra columns
+            missing_columns = [col for col in columns if col not in d]
+            for col in missing_columns:
+                col_type = columns_and_types[col]
+                if similar_type(col_type, 'float'):
+                    d[col] = 0
+                elif similar_type(col_type, 'str'):
+                    d[col] = ''
+                else:
+                    d[col] = None
+
+            extra_columns = [col for col in d if col not in columns]
+            for col in extra_columns:
+                del d[col]
+
+        for col, value in d.items():
+            d_type = type(value).__name__.lower()
+            if not similar_type(columns_and_types[col], t_map[d_type]):  # fix value/type in dict
+
+                if similar_type(columns_and_types[col], 'float'):
+                    try:
+                        d[col] = float(value if not isinstance(value, str) else value.strip())
+                    except (ValueError, TypeError):
+                        d[col] = None
+                elif similar_type(columns_and_types[col], 'str'):
+                    d[col] = str(value)
+                else:
+                    d[col] = None
+
+    return data
+
+
+def similar_type(t1, t2) -> bool:
+    '''
+    Check two type strings and determine if they are close enough to the same type
+    for Python/database interaction.
+    '''
+    t1, t2 = t1.lower(), t2.lower()
+
+    if t1 == t2:
+        return True
+
+    numeric = lambda x: True if 'int' in x or 'double' in x or 'float' in x or 'real' in x else False
+    if numeric(t1) and numeric(t2):
+        return True
+
+    text = lambda x: True if 'text' in x or 'str' in x or 'char' in x else False
+    if text(t1) and text(t2):
+        return True
+
+    time = lambda x: True if 'time' in x or 'date' in x else False
+    if time(t1) and time(t2):
+        return True
+
+    return False
