@@ -509,17 +509,50 @@ class DataBase():
         Duplicates are determined by grouping based on the grouping_columns kwarg (provide iterable).
         If grouping_columns is not provided, all columns are used (rows must match perfectly).
         '''
-        if self.db_type != 'SQLITE':
-            print('.delete_duplicates currently only implemented for SQLite databases.')
+        if self.db_type not in ['SQLITE', 'ACCESS']:
+            print('.delete_duplicates currently only implemented for SQLite and Access databases.')
             return
+
+        print(f'Deleting duplicate rows from {tablename}.  Please wait...')
 
         if grouping_columns is None:
             grouping_columns = sorted(self.columns_and_types(tablename).keys())
-        print(f'Deleting duplicate rows from {tablename}.  Please wait...')
-        conn, cursor = self.connection(also_cursor=True)
-        cursor.execute(f'DELETE FROM {tablename} WHERE rowid NOT IN (SELECT max(rowid) FROM {tablename} GROUP BY {", ".join(grouping_columns)})')
-        conn.commit()
-        self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
+
+        if self.db_type == 'SQLITE':
+            with self as cursor:
+            # conn, cursor = self.connection(also_cursor=True)
+                cursor.execute(f'DELETE FROM {tablename} WHERE rowid NOT IN (SELECT max(rowid) FROM {tablename} GROUP BY {", ".join(grouping_columns)})')
+            # conn.commit()
+            self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
+
+        elif self.db_type == 'ACCESS':
+            # TODO:  Think some sort of SQL can accomplish dup deletion better than in Python... haven't figured it out yet
+            # with self as cursor:
+                # cursor.execute(f'DELETE * FROM {tablename} WHERE rowid NOT IN (SELECT max(rowid) FROM {tablename} GROUP BY {", ".join(grouping_columns)})')
+                # cursor.execute(f'DELETE * FROM {tablename} WHERE rowid NOT IN (SELECT DISTINCT {", ".join(grouping_columns)} FROM {tablename})')
+                # cursor.execute(f'DELETE {tablename}.* WHERE NOT EXISTS (SELECT DISTINCT {", ".join(grouping_columns)} FROM {tablename})')
+                # sql = f'SELECT DISTINCT {", ".join(grouping_columns)} FROM {tablename}'
+                # print(sql)
+                # print(cursor.execute(sql).fetchall())
+                # sql = f'DELETE * FROM {tablename} WHERE {", ".join(grouping_columns)} NOT IN (SELECT DISTINCT {", ".join(grouping_columns)} FROM {tablename})'
+                # sql = f'DELETE * FROM {tablename} WHERE NOT EXISTS (SELECT DISTINCT {", ".join(grouping_columns)} FROM {tablename})'
+                # sql = f'DELETE * FROM {tablename} WHERE EXISTS LEFT JOIN {tablename} ON (SELECT DISTINCT {", ".join(grouping_columns)} FROM {tablename})'
+                # print(sql)
+                # cursor.execute(f'DELETE * FROM {tablename} WHERE {", ".join(grouping_columns)} NOT IN (SELECT DISTINCT {", ".join(grouping_columns)} FROM {tablename})')
+                # cursor.execute(sql)
+
+            data = self.pull(tablename)
+            existing_combos = set()
+            new_data = []
+            for row in data:
+                row_combo = tuple(row[col] for col in grouping_columns)
+                if row_combo not in existing_combos:
+                    new_data.append(row)
+                    existing_combos.add(row_combo)
+            with self as cursor:
+                cursor.execute(f'DELETE * FROM {tablename};')
+            self.append_to_table(tablename, new_data)
+            self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
 
 
     def create_index(self, tablename: str, column: str, index_name: str='', unique: bool=False):

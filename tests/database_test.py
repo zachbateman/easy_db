@@ -129,19 +129,19 @@ class TestAccess(unittest.TestCase):
         self.db.create_table('BAD_TYPES', {'col_1': str, 'col_2': str, 'col_3': 'bad_type', 'col_3': tuple()})
         self.assertTrue('BAD_TYPES' not in self.db.table_names())
 
-    # def test_duplicate_deletion(self):
-        # data = [{'c1': 5, 'c2': 6, 'c3': 7, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 7, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 3, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 3, 'c4': 8}]
-        # self.db.drop_table('DUP_TABLE')
-        # self.db.append_to_table('DUP_TABLE', data)
-        # self.assertTrue(self.db.pull_table('DUP_TABLE') == data)
-        # self.db.delete_duplicates('DUP_TABLE')
-        # self.assertTrue(self.db.pull_table('DUP_TABLE', clear_cache=True) == data[:3])
-        # self.db.delete_duplicates('DUP_TABLE', grouping_columns=['c1', 'c2'])
-        # self.assertTrue(len(self.db.pull_table('DUP_TABLE', clear_cache=True)) == 2)
-        # self.db.append_to_table('DUP_TABLE', data)
-        # self.db.delete_duplicates('DUP_TABLE', grouping_columns=['c1'])
-        # self.assertTrue(len(self.db.pull_table('DUP_TABLE', clear_cache=True)) == 1)
-        # self.db.drop_table('DUP_TABLE')
+    def test_duplicate_deletion(self):
+        data = [{'c1': 5, 'c2': 6, 'c3': 7, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 7, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 3, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 3, 'c4': 8}]
+        self.db.drop_table('DUP_TABLE')
+        self.db.append_to_table('DUP_TABLE', data)
+        self.assertTrue(self.db.pull_table('DUP_TABLE') == data)
+        self.db.delete_duplicates('DUP_TABLE')
+        self.assertTrue(self.db.pull_table('DUP_TABLE', clear_cache=True) == data[:3])
+        self.db.delete_duplicates('DUP_TABLE', grouping_columns=['c1', 'c2'])
+        self.assertTrue(len(self.db.pull_table('DUP_TABLE', clear_cache=True)) == 2)
+        self.db.append_to_table('DUP_TABLE', data)
+        self.db.delete_duplicates('DUP_TABLE', grouping_columns=['c1'])
+        self.assertTrue(len(self.db.pull_table('DUP_TABLE', clear_cache=True)) == 1)
+        self.db.drop_table('DUP_TABLE')
 
     def test_append(self):
         with self.db as cursor:
