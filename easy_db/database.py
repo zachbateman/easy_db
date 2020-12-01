@@ -351,7 +351,7 @@ class DataBase():
             print(f'\nUnable to create table "{tablename}"\nPerhaps the database is locked?!')
 
 
-    def append_to_table(self, tablename: str, data: list, create_table_if_needed: bool=True, safe=False, clean_column_names=False, robust: bool=True):
+    def append(self, tablename: str, data: list, create_table_if_needed: bool=True, safe=False, clean_column_names=False, robust: bool=True):
         '''
         Append rows of data to database table.
         Create the table in the database if it doesn't exist if create_table_if_needed is True
@@ -551,7 +551,7 @@ class DataBase():
                     existing_combos.add(row_combo)
             with self as cursor:
                 cursor.execute(f'DELETE * FROM {tablename};')
-            self.append_to_table(tablename, new_data)
+            self.append(tablename, new_data)
             self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
 
 
@@ -630,7 +630,7 @@ class DataBase():
         self.drop_table(tablename)
         self.create_table(tablename, columns_and_types)
         if table_data:
-            self.append_to_table(tablename, table_data)
+            self.append(tablename, table_data)
         print(f'Table {tablename} copied!')
 
 
