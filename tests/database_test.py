@@ -4,7 +4,6 @@ sys.path.insert(1, '..')
 import easy_db
 
 
-
 class TestSQLite(unittest.TestCase):
 
     def setUp(self):
@@ -98,6 +97,11 @@ class TestSQLite(unittest.TestCase):
         self.assertTrue(self.db.pull_table('UPDATE_TEST', clear_cache=True) ==  [{'c1': 1, 'c2': -2, 'c3': -3}, {'c1': 11, 'c2': 22, 'c3': -33}])
         self.db.update('UPDATE_TEST', 'c1', [1, 11], 'c2', 0)
         self.assertTrue(self.db.pull_table('UPDATE_TEST', clear_cache=True) == [{'c1': 1, 'c2': 0, 'c3': -3}, {'c1': 11, 'c2': 0, 'c3': -33}])
+
+        self.db.append('UPDATE_TEST', {'c1': 9, 'c2': 9, 'c3': 9})
+        self.db.append('UPDATE_TEST', {'c1': 99}, robust=True)
+        self.db.append('UPDATE_TEST', {'c1': 99}, robust=False)
+        self.assertTrue(len(self.db.pull('UPDATE_TEST', clear_cache=True)) == 4)
         self.db.drop_table('UPDATE_TEST')
 
     def test_context_manager(self):

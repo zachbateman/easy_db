@@ -1,6 +1,7 @@
 '''
 Module containing easy_db DataBase class.
 '''
+from typing import Union, List
 import sqlite3
 import pyodbc
 import os
@@ -351,7 +352,7 @@ class DataBase():
             print(f'\nUnable to create table "{tablename}"\nPerhaps the database is locked?!')
 
 
-    def append(self, tablename: str, data: list, create_table_if_needed: bool=True, safe=False, clean_column_names=False, robust: bool=True):
+    def append(self, tablename: str, data: Union[List[dict], dict], create_table_if_needed: bool=True, safe=False, clean_column_names=False, robust: bool=True):
         '''
         Append rows of data to database table.
         Create the table in the database if it doesn't exist if create_table_if_needed is True
@@ -364,6 +365,9 @@ class DataBase():
         if not data:  # check to ensure provided data actually contains rows of data
             print('No data provided to append.')
             return
+
+        if isinstance(data, dict):  # handle case of single row append by converting it to a list
+            data = [data]
 
         if clean_column_names:
             print('Cleaning column names in data to be appended.')
@@ -391,7 +395,7 @@ class DataBase():
                 print('Append data column order adjusted to match db table column order.')
             except KeyError:
                 print(f'Error!  Table {tablename} columns do not match the keys of the data to be appended.')
-                print('Set clean_column_names=True to replace " " and "/" with underscores in data keys.')
+                print('Try setting robust=True and/or /n  set clean_column_names=True to replace " " and "/" with underscores in data keys.')
                 return
 
         if self.db_type == 'SQLITE':
