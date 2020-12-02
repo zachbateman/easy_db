@@ -600,7 +600,7 @@ class DataBase():
                     existing_combos.add(row_combo)
             with self as cursor:
                 cursor.execute(f'DELETE * FROM {tablename};')
-            self.append(tablename, new_data)
+            self.append(tablename, list(reversed(new_data)))  # UN-reverse table entries
             self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
 
 
