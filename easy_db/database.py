@@ -297,6 +297,17 @@ class DataBase():
                 return {key: type(value).__name__.lower() for key, value in data[0].items()}
 
 
+    def key_columns(self, tablename: str) -> list:
+        '''
+        Return the columns of the specified table that are primary keys.'
+        '''
+        if not self.db_type == 'ACCESS':
+            print('ERROR!  .key_columns is only currently implemented for Access databases.')
+        with self as cursor:
+            key_cols = [row[8] for row in cursor.statistics(tablename) if row[5] == 'PrimaryKey']
+        return key_cols
+
+
     def create_table(self, tablename: str, columns_and_types: dict, force_overwrite: bool=False):
         '''
         Create a table in the database with name "tablename"
@@ -352,6 +363,25 @@ class DataBase():
             print(f'\nUnable to create table "{tablename}"\nPerhaps the database is locked?!')
 
 
+    def _check_potential_duplicates(self, tablename: str, data: list) -> set:
+        '''
+        Check for rows in data arg that would be error-causing duplicates
+        (same primary keys) as existing database rows.
+        Return set of key-tuples from existing rows to be avoided.
+        '''
+        keys = self.key_columns(tablename)
+        if not keys:
+            return set()
+        else:
+            existing_tups = set(tuple(row[key] for key in keys) for row in self.pull(tablename, columns=keys, clear_cache=True))
+            dups = set()
+            for d in data:
+                tup = tuple(d[key] for key in keys)
+                if tup in existing_tups:
+                    dups.add(tup)
+            return dups
+
+
     def append(self, tablename: str, data: Union[List[dict], dict], create_table_if_needed: bool=True, safe=False, clean_column_names=False, robust: bool=True):
         '''
         Append rows of data to database table.
@@ -403,6 +433,21 @@ class DataBase():
         else:
             insert_sql = f"INSERT INTO [{tablename}] ({', '.join(columns)}) VALUES "
         insert_many_sql = insert_sql + f"({', '.join(['?' for _ in range(len(columns))])});"
+
+        # Check for potential duplicate (key) entries if Access to avoid pyodbc error and crash of whole append.
+        if self.db_type == 'ACCESS' and robust:
+            dup_rows = self._check_potential_duplicates(tablename, data)
+            key_cols = self.key_columns(tablename)
+            if dup_rows:
+                non_dup_data = [d for d in data if tuple(d[key] for key in key_cols) not in dup_rows]
+                skip_count = len(data) - len(non_dup_data)
+                print(f"\n{skip_count} row{'s' if skip_count > 1 else ''} {'were' if skip_count > 1 else 'was'} skipped in .append due to being primary key duplicates\n  of rows that already exist in table: {tablename}")
+                if not non_dup_data:
+                    print('No remaining data to append.')
+                    return
+                print(f'The remaining {len(non_dup_data)} rows are still being appended.\n')
+                data = non_dup_data
+
 
         conn, cursor = self.connection(also_cursor=True)
         pbar = tqdm.tqdm(total=len(data))
@@ -548,7 +593,7 @@ class DataBase():
             data = self.pull(tablename)
             existing_combos = set()
             new_data = []
-            for row in data:
+            for row in reversed(data):
                 row_combo = tuple(row[col] for col in grouping_columns)
                 if row_combo not in existing_combos:
                     new_data.append(row)

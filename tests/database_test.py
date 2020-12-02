@@ -176,6 +176,17 @@ class TestAccess(unittest.TestCase):
         self.assertTrue(self.db.pull_table('UPDATE_TEST', clear_cache=True) == [{'c1': 1, 'c2': 0, 'c3': -3}, {'c1': 11, 'c2': 0, 'c3': -33}])
         self.db.drop_table('UPDATE_TEST')
 
+    def test_duplicate_append(self):
+        existing_id = 'TLAJLKDF'
+        data =  [{'ID': existing_id},
+                     {'ID': existing_id, 'STATE': 'TEST', 'ENTITY_NAME': 'ENTITY 2'},
+                     {'ID': existing_id + '_x', 'STATE': 'TEST', 'ENTITY_NAME': 'ENTITY 2'}]
+        self.db.append('TEST', data)
+        self.db.append('TEST', data)
+
+    def test_key_columns(self):
+        self.assertTrue(self.db.key_columns('TEST') == ['ID'])
+
     def test_context_manager(self):
         with self.db as cursor:
             cursor.execute('SELECT * FROM TEST;')
