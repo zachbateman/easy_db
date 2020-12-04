@@ -623,7 +623,7 @@ class DataBase():
         Drop/delete the specified table from the database.
         '''
         if tablename not in self.table_names():
-            print(f'Table {tablename} does not exist; ignoring drop_table.')
+            print(f'Table "{tablename}" does not exist.  Table drop aborted.')
             return
 
         if self.db_type == 'SQLITE':
@@ -655,23 +655,27 @@ class DataBase():
         self._pull_table_cache.pop(tablename, None)  # clear cache for this table as table has been dropped
 
 
-    def copy_table(self, other_easydb, tablename: str, new_tablename: str='', column_case: str='same', progress_handler=None):
+    def copy_table(self, other_db, tablename: str, new_tablename: str='', column_case: str='same', progress_handler=None):
         '''
         Copy specified table from other easy_db.DataBase to this DB.
         If desired, column names can be set to be all upper or lower-case
         via column_case kwarg ('upper' = UPPERCASE and 'lower' lowercase)
         '''
-        data = other_easydb.pull_table(tablename, clear_cache=True, progress_handler=progress_handler)  # clearing cache to ensure fresh pull
+        if tablename not in other_db.table_names():
+            print(f'Table "{tablename}" not found.  Table copy aborted.')
+            return
+
+        data = other_db.pull_table(tablename, clear_cache=True, progress_handler=progress_handler)  # clearing cache to ensure fresh pull
         if column_case.lower() == 'lower':
-            columns_and_types = {key.lower(): val for key, val in other_easydb.columns_and_types(tablename).items()}
+            columns_and_types = {key.lower(): val for key, val in other_db.columns_and_types(tablename).items()}
             table_data = [{col.lower(): val for col, val in d.items()} for d in data]
         elif column_case.lower() == 'upper':
-            columns_and_types = {key.upper(): val for key, val in other_easydb.columns_and_types(tablename).items()}
+            columns_and_types = {key.upper(): val for key, val in other_db.columns_and_types(tablename).items()}
             table_data = [{col.upper(): val for col, val in d.items()} for d in data]
         else:
             if column_case.lower() != 'same':
                 print('Warning!  .copy_table column_case kwarg must be "same", "upper", or "lower".  Defaulting to "same".')
-            columns_and_types = other_easydb.columns_and_types(tablename)
+            columns_and_types = other_db.columns_and_types(tablename)
             table_data = data
 
         if new_tablename != '':
