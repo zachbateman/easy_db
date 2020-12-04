@@ -185,6 +185,10 @@ class DataBase():
 
         Return list of dicts for rows with column names as keys.
         '''
+        if tablename not in self.table_names():
+            print(f'Table "{tablename}" not found.  Table pull aborted.')
+            return []
+
         if clear_cache:
             self._pull_table_cache = {}
             return self.pull_table(tablename, columns)
