@@ -185,8 +185,8 @@ class DataBase():
 
         Return list of dicts for rows with column names as keys.
         '''
-        if tablename not in self.table_names():
-            print(f'Table "{tablename}" not found.  Table pull aborted.')
+        if tablename not in self.table_names() + self.query_names():
+            print(f'Table or query "{tablename}" not found.  Pull aborted.')
             return []
 
         if clear_cache:
@@ -271,6 +271,18 @@ class DataBase():
         else:
             tables = cursor.tables()
         return sorted(tables)
+
+
+    def query_names(self) -> list:
+        '''
+        Return sorted list of all queries in the database.
+        Only works for Access Select queries.
+        '''
+        if self.db_type == 'ACCESS':
+            conn, cursor = self.connection(also_cursor=True)
+            return sorted(tup[2] for tup in cursor.tables() if tup[3] == 'VIEW')
+        else:
+            return []
 
 
     def columns_and_types(self, tablename: str) -> dict:
