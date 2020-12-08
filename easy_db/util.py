@@ -88,7 +88,7 @@ def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str, par
         print(f'ERROR querying table {tablename}!  Error below:')
         print(error)
         print(f'SQL: {sql}')
-        return
+        return []
 
     if db_type == 'SQLITE':
         columns = [description[0] for description in cursor.description]
@@ -105,17 +105,16 @@ def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str, par
     return [dict(zip(columns, row)) for row in data]  # table data
 
 
-# set for quickly checking possibly malicious characters
-unallowed_characters = {';', '(', ')', '=', '+', "'", '"', '.', '[', ']', ',',
-    '{', '}', '\\', '/', '`', '~', '!', '@', '#', '$', '%', '^', '&', '*'}
-
 def name_clean(name: str) -> bool:
     '''
     Check name and return True if it looks clean (not malicious).
-    Return False if it name could be attempting sql injection.
+    Return False if it name could be attempting SQL injection.
 
     Used for table names and column names (as these can't be parameterized).
     '''
+    # set for quickly checking possibly malicious characters
+    unallowed_characters = {';', '(', ')', '=', '+', "'", '"', '.', '[', ']', ',',
+        '{', '}', '\\', '/', '`', '~', '!', '@', '#', '$', '%', '^', '&', '*'}
     for char in name:
         if char in unallowed_characters:
             print(f'ERROR!!!  Prohibited characters detected in:\n  {name}')
@@ -149,7 +148,7 @@ def clean_data(data, columns_and_types, db_type) -> List[dict]:
     Best effort to clean list of dicts representing database table rows to handle mismatched types,
     null values, and missing columns.
     '''
-    columns, types = list(columns_and_types.keys()), list(columns_and_types.values())
+    columns = list(columns_and_types.keys())
     num_col = len(columns)
     t_map = type_map(db_type)
 
@@ -204,7 +203,7 @@ def similar_type(t1, t2) -> bool:
     if text(t1) and text(t2):
         return True
 
-    time = lambda x: True if 'time' in x or 'date' in x else False
+    time = lambda x: True if 'time' in x or 'date' in x or 'real' in x or 'text' in x else False
     if time(t1) and time(t2):
         return True
 

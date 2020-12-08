@@ -209,9 +209,9 @@ class TestUtil(unittest.TestCase):
 
     def test_malicious_query(self):
         data = self.db.pull_table('DROP TABLE TEST_TABLE')
-        self.assertTrue(data is None)
+        self.assertTrue(not data)
         data = self.db.pull_table('TEST_TABLE', columns=('row_id;1=1;--', 'value_1'))
-        self.assertTrue(data is None)
+        self.assertTrue(not data)
 
     def test_similarity(self):
         self.assertTrue(easy_db.util.similar_type('int', 'FLOAT64'))

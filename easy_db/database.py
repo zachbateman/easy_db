@@ -196,7 +196,7 @@ class DataBase():
             # check for questionable table/column names
             for name in [tablename] + list(columns):
                 if not util.name_clean(name):
-                    return
+                    return []
 
             requested_data_key = f'{tablename}_' + '_'.join(sorted(columns))  # key string for caching db pulls in dict
             if requested_data_key not in self._pull_table_cache:
