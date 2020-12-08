@@ -13,6 +13,37 @@ precise control is desired.
  - Expose database connection and cursor to users wanting fine-grained control
  - Just get the data into Python so we can use it!
 
+
+# Why use easy_db?
+
+Before easy_db:
+```sh
+import pyodbc
+import os
+
+conn = pyodbc.connect(
+    r'Driver={Microsoft Access Driver (*.mdb, *.accdb)};' +
+    r'DBQ=' + os.path.abspath('MyDatabase.accdb') + ';')
+cursor = conn.cursor()
+cursor.execute('SELECT * FROM test_table;')
+data = cursor.fetchall()
+columns = [col[0] for col in cursor.description]
+table_data = [dict(zip(columns, row)) for row in data]
+
+# table_data -> [{'column1': value1, 'column2': value2}, {...}, ...]
+```
+
+Using easy_db:
+```sh
+import easy_db
+
+db = easy_db.DataBase('MyDatabase.accdb')
+table_data = db.pull('test_table')
+
+# table_data -> [{'column1': value1, 'column2': value2}, {...}, ...]
+```
+
+
 # Quick Start
 
 Let's first connect to a SQLite database.
@@ -31,9 +62,9 @@ Table columns and types are simple to investigate.
 print(db.columns_and_types('example_table'))
 ```
 
-Let's pull all of the data from a table.  We could start with something like "SELECT * ..." but this is way more fun:
+Let's pull all of the data from a table.  We could start with something like "SELECT * ...", but this is way more fun:
 ```sh
-data = db.pull_table('example_table')
+data = db.pull('example_table')
 ```
 
 Note that the table/query data is returned as a list of dictionaries with column names as dictionary keys.
