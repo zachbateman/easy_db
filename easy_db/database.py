@@ -320,7 +320,7 @@ class DataBase():
         if not self.db_type == 'ACCESS':
             print('ERROR!  .key_columns is only currently implemented for Access databases.')
         with self as cursor:
-            key_cols = [row[8] for row in cursor.statistics(tablename) if row[5] == 'PrimaryKey']
+            key_cols = [row[8] for row in cursor.statistics(tablename) if row[5] and 'key' in row[5].lower()]
         return key_cols
 
 
@@ -405,6 +405,11 @@ class DataBase():
 
         "data" arg is list of row dicts where each row dict contains all columns as keys.
 
+        "safe" kwarg is False by default and parameterized insert queries are used.
+        IF you know the data is ~~~VERY SAFE~~~ without a chance of SQL Injection...
+        ...then setting safe=True converts data into direct SQL strings for faster imports.
+        Note that safe=True is more delicate and sensitive to the quality of data.
+
         "robust" kwarg enables automatic data cleaning (type conversions, null, missing columns) if True.
         Setting robust to False improves speed if using clean input data.
         '''
@@ -472,7 +477,7 @@ class DataBase():
             try:
                 if safe:
                     for row in data[-100:]:
-                        cursor.execute(insert_sql + "(" + ','.join(["'" + str(row[col]) + "'" for col in columns]) + ");")
+                        cursor.execute(insert_sql + '(' + ','.join([f'{row[col]}' for col in columns]) + ');')
                 elif not safe:
                     cursor.executemany(insert_many_sql, [tuple(row_dict[col] for col in columns) for row_dict in data[-100:]])
                 pbar.update(100 if len(data) >= 100 else len(data))
@@ -484,7 +489,7 @@ class DataBase():
         conn.commit()
         conn.close()
         self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
-        print(f'Data inserted in "{tablename}" -> {"{:,.0f}".format(original_data_len)} rows')
+        print(f'Data inserted in "{tablename}" -> {'{:,.0f}'.format(original_data_len)} rows')
 
 
     def update(self, tablename: str, match_col: str, match_val, update_col: str, update_val, progress_handler=None):
@@ -616,7 +621,7 @@ class DataBase():
                     existing_combos.add(row_combo)
             with self as cursor:
                 cursor.execute(f'DELETE * FROM {tablename};')
-            self.append(tablename, list(reversed(new_data)))  # UN-reverse table entries
+            self.append(tablename, list(reversed(new_data)), safe=True, robust=False)  # UN-reverse table entries
             self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
 
 
