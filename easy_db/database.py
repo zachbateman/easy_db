@@ -422,17 +422,14 @@ class DataBase():
 
         if clean_column_names:
             print('Cleaning column names in data to be appended.')
-            data_keys = list(data[0].keys())
-            for row in data:
-                for key in data_keys:
+            for key in list(data[0].keys())
+                for row in data:
                     row[util.clean_column_name(key)] = row.pop(key)
 
         if tablename not in self.table_names() and create_table_if_needed:
-            columns_and_types = {key: type(value).__name__ for key, value in data[0].items()}
-            self.create_table(tablename, columns_and_types)
+            self.create_table(tablename, {key: type(value).__name__ for key, value in data[0].items()})
         elif tablename not in self.table_names() and not create_table_if_needed:
-            print(f'ERROR!  Table "{tablename}" does not exist in database!')
-            print('Use create_table_if_needed=True if you would like to create it.')
+            print(f'ERROR!  Table "{tablename}" does not exist in database!\nUse create_table_if_needed=True if you would like to create it.')
             return None
 
         if robust:
@@ -478,7 +475,7 @@ class DataBase():
                 if safe:
                     for row in data[-100:]:
                         cursor.execute(insert_sql + '(' + ','.join([f'{row[col]}' for col in columns]) + ');')
-                elif not safe:
+                else:
                     cursor.executemany(insert_many_sql, [tuple(row_dict[col] for col in columns) for row_dict in data[-100:]])
                 pbar.update(100 if len(data) >= 100 else len(data))
                 data = data[:-100]
@@ -488,7 +485,7 @@ class DataBase():
         pbar.close()
         conn.commit()
         conn.close()
-        self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
+        self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something has been updated
         print(f'Data inserted in "{tablename}" -> {'{:,.0f}'.format(original_data_len)} rows')
 
 
@@ -554,9 +551,8 @@ class DataBase():
             return
         if new_type == 'str':
             new_type = 'varchar(255)' if self.db_type == 'ACCESS' else 'TEXT'
-        conn, cursor = self.connection(also_cursor=True)
-        cursor.execute(f'ALTER TABLE {tablename} ADD COLUMN {new_col} {new_type};')
-        conn.commit()
+        with self as cursor
+            cursor.execute(f'ALTER TABLE {tablename} ADD COLUMN {new_col} {new_type};')
         print(f'Column {new_col} added to {tablename}.')
         self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
 
@@ -566,9 +562,10 @@ class DataBase():
         if column not in self.columns_and_types(tablename):
             print(f'Column {column} does not exist in {tablename}.')
             return
-        conn, cursor = self.connection(also_cursor=True)
-        cursor.execute(f'ALTER TABLE {tablename} DROP COLUMN "{column}";')
-        conn.commit()
+
+        with self as cursor:
+            cursor.execute(f'ALTER TABLE {tablename} DROP COLUMN "{column}";')
+
         print(f'Column {column} removed from {tablename}')
         self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
 
@@ -590,9 +587,7 @@ class DataBase():
 
         if self.db_type == 'SQLITE':
             with self as cursor:
-            # conn, cursor = self.connection(also_cursor=True)
                 cursor.execute(f'DELETE FROM {tablename} WHERE rowid NOT IN (SELECT max(rowid) FROM {tablename} GROUP BY {", ".join(grouping_columns)})')
-            # conn.commit()
             self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
 
         elif self.db_type == 'ACCESS':
@@ -622,19 +617,14 @@ class DataBase():
             with self as cursor:
                 cursor.execute(f'DELETE * FROM {tablename};')
             self.append(tablename, list(reversed(new_data)), safe=True, robust=False)  # UN-reverse table entries
-            self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
+            self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something has been updated
 
 
     def create_index(self, tablename: str, column: str, index_name: str='', unique: bool=False):
         if self.db_type == 'SQLITE':
             index_name = column if index_name == '' else index_name  # use column name if not provided
-            conn, cursor = self.connection(also_cursor=True)
-            if unique:
-                cursor.execute(f'CREATE UNIQUE INDEX {index_name} on {tablename}({column});')
-            else:
-                cursor.execute(f'CREATE INDEX {index_name} on {tablename}({column});')
-            conn.commit()
-            conn.close()
+            with self as cursor:
+                cursor.execute(f'CREATE {"UNIQUE " if unique else ""}INDEX {index_name} on {tablename}({column});'
         else:
             print('.create_index is currently only implemented for SQLite databases.')
 
@@ -649,25 +639,22 @@ class DataBase():
 
         if self.db_type == 'SQLITE':
             t0, drop_complete = time.time(), False
-            conn, cursor = self.connection(also_cursor=True)
-            while time.time() - t0 < 10:
-                try:
-                    cursor.execute(f'DROP TABLE IF EXISTS "{tablename}";')
-                    conn.commit()
-                    drop_complete = True
-                    break
-                except sqlite3.OperationalError:
-                    pass
-            conn.close()
+            with self as cursor:
+                while time.time() - t0 < 10:
+                    try:
+                        cursor.execute(f'DROP TABLE IF EXISTS "{tablename}";')
+                        drop_complete = True
+                        break
+                    except sqlite3.OperationalError:
+                        pass
+
             if drop_complete:
                 print(f'Table "{tablename}" deleted.')
             else:
                 print(f'Unable to drop table "{tablename}" as the database is locked!')
         elif self.db_type == 'ACCESS':
-            conn, cursor = self.connection(also_cursor=True)
-            cursor.execute(f'DROP TABLE {tablename};')
-            conn.commit()
-            conn.close()
+            with self as cursor:
+                cursor.execute(f'DROP TABLE {tablename};')
             print(f'Table {tablename} deleted.')
         else:
             print('ERROR!  Table deletion only implemented in SQLite and Access currently.')
