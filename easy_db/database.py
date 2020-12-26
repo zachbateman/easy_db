@@ -467,6 +467,13 @@ class DataBase():
                 data = non_dup_data
 
 
+        def convert_to_sql(value):
+            if value is None:
+                return 'NULL'
+            elif isinstance(value, str):
+                return f"'{value}'"
+            else:
+                return value
         conn, cursor = self.connection(also_cursor=True)
         pbar = tqdm.tqdm(total=len(data))
         original_data_len = len(data)
@@ -474,7 +481,7 @@ class DataBase():
             try:
                 if safe:
                     for row in data[-100:]:
-                        cursor.execute(insert_sql + '(' + ','.join([f'{row[col]}' for col in columns]) + ');')
+                        cursor.execute(insert_sql + '(' + ','.join([f'{convert_to_sql(row[col])}' for col in columns]) + ');')
                 else:
                     cursor.executemany(insert_many_sql, [tuple(row_dict[col] for col in columns) for row_dict in data[-100:]])
                 pbar.update(100 if len(data) >= 100 else len(data))

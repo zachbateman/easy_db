@@ -182,6 +182,10 @@ def clean_data(data, columns_and_types, db_type) -> List[dict]:
                 else:
                     d[col] = None
 
+            # now if final value is nan, convert to None for more consistent None/null
+            if isinstance(d[col], float) and not (d[col] <= 0 or d[col] >= 0):  # is nan
+                d[col] = None
+
     return data
 
 
