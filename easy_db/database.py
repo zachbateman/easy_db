@@ -422,7 +422,7 @@ class DataBase():
 
         if clean_column_names:
             print('Cleaning column names in data to be appended.')
-            for key in list(data[0].keys())
+            for key in list(data[0].keys()):
                 for row in data:
                     row[util.clean_column_name(key)] = row.pop(key)
 
@@ -486,7 +486,7 @@ class DataBase():
         conn.commit()
         conn.close()
         self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something has been updated
-        print(f'Data inserted in "{tablename}" -> {'{:,.0f}'.format(original_data_len)} rows')
+        print(f'Data inserted in "{tablename}" -> {"{:,.0f}".format(original_data_len)} rows')
 
 
     def update(self, tablename: str, match_col: str, match_val, update_col: str, update_val, progress_handler=None):
@@ -551,7 +551,7 @@ class DataBase():
             return
         if new_type == 'str':
             new_type = 'varchar(255)' if self.db_type == 'ACCESS' else 'TEXT'
-        with self as cursor
+        with self as cursor:
             cursor.execute(f'ALTER TABLE {tablename} ADD COLUMN {new_col} {new_type};')
         print(f'Column {new_col} added to {tablename}.')
         self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
@@ -624,7 +624,7 @@ class DataBase():
         if self.db_type == 'SQLITE':
             index_name = column if index_name == '' else index_name  # use column name if not provided
             with self as cursor:
-                cursor.execute(f'CREATE {"UNIQUE " if unique else ""}INDEX {index_name} on {tablename}({column});'
+                cursor.execute(f'CREATE {"UNIQUE " if unique else ""}INDEX {index_name} on {tablename}({column});')
         else:
             print('.create_index is currently only implemented for SQLite databases.')
 

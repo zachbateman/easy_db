@@ -28,7 +28,7 @@ class TestSQLite(unittest.TestCase):
         self.assertTrue(tables == sorted(tables))
 
     def test_full_table_pull(self):
-        test_table_data = self.db.pull_table('TEST_TABLE')
+        test_table_data = self.db.pull('TEST_TABLE')
         print(test_table_data[0])
         self.assertTrue(type(test_table_data) == list)
         self.assertTrue(type(test_table_data[0]) == dict)
@@ -42,14 +42,14 @@ class TestSQLite(unittest.TestCase):
         self.assertTrue(len(test_table_data) == 31)
 
     def test_full_table_pull_specific_columns(self):
-        test_table_data = self.db.pull_table('TEST_TABLE', columns=('row_id', 'value_1'))
+        test_table_data = self.db.pull('TEST_TABLE', columns=('row_id', 'value_1'))
         print(test_table_data[0])
         self.assertTrue(type(test_table_data) == list)
         self.assertTrue(type(test_table_data[0]) == dict)
         self.assertTrue(len(test_table_data) == 31)
         self.assertTrue(len(test_table_data[0].keys()) == 2)
 
-    def test_pull_where_id_in_list(self):
+    def test_pull_table_where_id_in_list(self):
         test_pulled_data = self.db.pull_table_where_id_in_list('THIRD_TABLE', 'parameter', [0.66, 0.67], use_multip=False)
         self.assertTrue(len(test_pulled_data) == 116)
         self.assertTrue(all(d['parameter'] in [0.66, 0.67] for d in test_pulled_data))
@@ -66,37 +66,37 @@ class TestSQLite(unittest.TestCase):
 
     def test_progress_callback(self):
         callback = lambda *args: print('Making progress...')
-        data = self.db.pull_table('THIRD_TABLE', progress_handler=callback)
+        data = self.db.pull('THIRD_TABLE', progress_handler=callback)
 
     def test_progress_callback_with_n(self):
         callback = lambda *args: print('Making progress 2...')
-        data = self.db.pull_table('THIRD_TABLE', progress_handler=(callback, 1000))
+        data = self.db.pull('THIRD_TABLE', progress_handler=(callback, 1000))
 
     def test_duplicate_deletion(self):
         data = [{'c1': 5, 'c2': 6, 'c3': 7, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 7, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 3, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 3, 'c4': 8}]
         self.db.drop_table('DUP_TABLE')
         self.db.append('DUP_TABLE', data)
-        self.assertTrue(self.db.pull_table('DUP_TABLE') == data)
+        self.assertTrue(self.db.pull('DUP_TABLE') == data)
         self.db.delete_duplicates('DUP_TABLE')
-        self.assertTrue(self.db.pull_table('DUP_TABLE', clear_cache=True) == data[:3])
+        self.assertTrue(self.db.pull('DUP_TABLE', clear_cache=True) == data[:3])
         self.db.delete_duplicates('DUP_TABLE', grouping_columns=['c1', 'c2'])
-        self.assertTrue(len(self.db.pull_table('DUP_TABLE', clear_cache=True)) == 2)
+        self.assertTrue(len(self.db.pull('DUP_TABLE', clear_cache=True)) == 2)
         self.db.append('DUP_TABLE', data)
         self.db.delete_duplicates('DUP_TABLE', grouping_columns=['c1'])
-        self.assertTrue(len(self.db.pull_table('DUP_TABLE', clear_cache=True)) == 1)
+        self.assertTrue(len(self.db.pull('DUP_TABLE', clear_cache=True)) == 1)
         self.db.drop_table('DUP_TABLE')
 
     def test_update(self):
         data = [{'c1': 1, 'c2': 2, 'c3': 3}, {'c1': 11, 'c2': 22, 'c3': 33}]
         self.db.drop_table('UPDATE_TEST')
         self.db.append('UPDATE_TEST', data)
-        self.assertTrue(data == self.db.pull_table('UPDATE_TEST'))
+        self.assertTrue(data == self.db.pull('UPDATE_TEST'))
         self.db.update('UPDATE_TEST', 'c1', 1, 'c2', -2)
-        self.assertTrue(self.db.pull_table('UPDATE_TEST', clear_cache=True) ==  [{'c1': 1, 'c2': -2, 'c3': 3}, {'c1': 11, 'c2': 22, 'c3': 33}])
+        self.assertTrue(self.db.pull('UPDATE_TEST', clear_cache=True) ==  [{'c1': 1, 'c2': -2, 'c3': 3}, {'c1': 11, 'c2': 22, 'c3': 33}])
         self.db.update('UPDATE_TEST', 'c1', [1, 11], 'c3', [-3, -33])
-        self.assertTrue(self.db.pull_table('UPDATE_TEST', clear_cache=True) ==  [{'c1': 1, 'c2': -2, 'c3': -3}, {'c1': 11, 'c2': 22, 'c3': -33}])
+        self.assertTrue(self.db.pull('UPDATE_TEST', clear_cache=True) ==  [{'c1': 1, 'c2': -2, 'c3': -3}, {'c1': 11, 'c2': 22, 'c3': -33}])
         self.db.update('UPDATE_TEST', 'c1', [1, 11], 'c2', 0)
-        self.assertTrue(self.db.pull_table('UPDATE_TEST', clear_cache=True) == [{'c1': 1, 'c2': 0, 'c3': -3}, {'c1': 11, 'c2': 0, 'c3': -33}])
+        self.assertTrue(self.db.pull('UPDATE_TEST', clear_cache=True) == [{'c1': 1, 'c2': 0, 'c3': -3}, {'c1': 11, 'c2': 0, 'c3': -33}])
 
         self.db.append('UPDATE_TEST', {'c1': 9, 'c2': 9, 'c3': 9})
         self.db.append('UPDATE_TEST', {'c1': 99}, robust=True)
@@ -137,14 +137,14 @@ class TestAccess(unittest.TestCase):
         data = [{'c1': 5, 'c2': 6, 'c3': 7, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 7, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 3, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 3, 'c4': 8}]
         self.db.drop_table('DUP_TABLE')
         self.db.append('DUP_TABLE', data)
-        self.assertTrue(self.db.pull_table('DUP_TABLE') == data)
+        self.assertTrue(self.db.pull('DUP_TABLE') == data)
         self.db.delete_duplicates('DUP_TABLE')
-        self.assertTrue(self.db.pull_table('DUP_TABLE', clear_cache=True) == data[:3])
+        self.assertTrue(self.db.pull('DUP_TABLE', clear_cache=True) == data[:3])
         self.db.delete_duplicates('DUP_TABLE', grouping_columns=['c1', 'c2'])
-        self.assertTrue(len(self.db.pull_table('DUP_TABLE', clear_cache=True)) == 2)
+        self.assertTrue(len(self.db.pull('DUP_TABLE', clear_cache=True)) == 2)
         self.db.append('DUP_TABLE', data)
         self.db.delete_duplicates('DUP_TABLE', grouping_columns=['c1'])
-        self.assertTrue(len(self.db.pull_table('DUP_TABLE', clear_cache=True)) == 1)
+        self.assertTrue(len(self.db.pull('DUP_TABLE', clear_cache=True)) == 1)
         self.db.drop_table('DUP_TABLE')
 
     def test_append(self):
@@ -163,17 +163,19 @@ class TestAccess(unittest.TestCase):
             self.db.append('TEST', new, robust=True)
             self.assertTrue(True)
 
+        self.db.append('TEST', {'ID': 'TKALSKJDF', 'STATE': None, 'ENTITY_NAME': 'ENTITY 2', 'SIZE': float('nan'),  'WEIGHT': None}, safe=True, robust=True)
+
     def test_update(self):
         data = [{'c1': 1, 'c2': 2, 'c3': 3}, {'c1': 11, 'c2': 22, 'c3': 33}]
         self.db.drop_table('UPDATE_TEST')
         self.db.append('UPDATE_TEST', data)
-        self.assertTrue(data == self.db.pull_table('UPDATE_TEST'))
+        self.assertTrue(data == self.db.pull('UPDATE_TEST'))
         self.db.update('UPDATE_TEST', 'c1', 1, 'c2', -2)
-        self.assertTrue(self.db.pull_table('UPDATE_TEST', clear_cache=True) ==  [{'c1': 1, 'c2': -2, 'c3': 3}, {'c1': 11, 'c2': 22, 'c3': 33}])
+        self.assertTrue(self.db.pull('UPDATE_TEST', clear_cache=True) ==  [{'c1': 1, 'c2': -2, 'c3': 3}, {'c1': 11, 'c2': 22, 'c3': 33}])
         self.db.update('UPDATE_TEST', 'c1', [1, 11], 'c3', [-3, -33])
-        self.assertTrue(self.db.pull_table('UPDATE_TEST', clear_cache=True) ==  [{'c1': 1, 'c2': -2, 'c3': -3}, {'c1': 11, 'c2': 22, 'c3': -33}])
+        self.assertTrue(self.db.pull('UPDATE_TEST', clear_cache=True) ==  [{'c1': 1, 'c2': -2, 'c3': -3}, {'c1': 11, 'c2': 22, 'c3': -33}])
         self.db.update('UPDATE_TEST', 'c1', [1, 11], 'c2', 0)
-        self.assertTrue(self.db.pull_table('UPDATE_TEST', clear_cache=True) == [{'c1': 1, 'c2': 0, 'c3': -3}, {'c1': 11, 'c2': 0, 'c3': -33}])
+        self.assertTrue(self.db.pull('UPDATE_TEST', clear_cache=True) == [{'c1': 1, 'c2': 0, 'c3': -3}, {'c1': 11, 'c2': 0, 'c3': -33}])
         self.db.drop_table('UPDATE_TEST')
 
     def test_duplicate_append(self):
@@ -208,9 +210,9 @@ class TestUtil(unittest.TestCase):
         self.assertFalse(easy_db.util.name_clean('drop'))
 
     def test_malicious_query(self):
-        data = self.db.pull_table('DROP TABLE TEST_TABLE')
+        data = self.db.pull('DROP TABLE TEST_TABLE')
         self.assertTrue(not data)
-        data = self.db.pull_table('TEST_TABLE', columns=('row_id;1=1;--', 'value_1'))
+        data = self.db.pull('TEST_TABLE', columns=('row_id;1=1;--', 'value_1'))
         self.assertTrue(not data)
 
     def test_similarity(self):
