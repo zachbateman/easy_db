@@ -160,10 +160,10 @@ class DataBase():
 
     def pull(self, *args, **kwargs) -> list:
         '''Shorthand for pull_table'''
-        return self.pull_table(*args, **kwargs)
+        return self.pull_table(*args, deprecated=False, **kwargs)
 
 
-    def pull_table(self, tablename: str, columns='all', clear_cache=False, progress_handler=None) -> list:
+    def pull_table(self, tablename: str, columns='all', clear_cache=False, progress_handler=None, deprecated=True) -> list:
         '''
         "SELECT *" query for full table as specified from tablename.
         ALSO WORKS for an Access Select query named tablename!
@@ -185,6 +185,9 @@ class DataBase():
 
         Return list of dicts for rows with column names as keys.
         '''
+        if deprecated:
+            print(f'Deprecation Warning:  Please use db.pull() instead of db.pull_table().')
+
         if tablename not in self.table_names() + self.query_names():
             print(f'Table or query "{tablename}" not found.  Pull aborted.')
             return []
@@ -259,6 +262,7 @@ class DataBase():
         return data
 
 
+    @lru_cache(maxsize=1)
     def table_names(self) -> list:
         '''
         Return sorted list of all tables in the database.
@@ -273,6 +277,7 @@ class DataBase():
         return sorted(tables)
 
 
+    @lru_cache(maxsize=1)
     def query_names(self) -> list:
         '''
         Return sorted list of all queries in the database.
@@ -374,6 +379,7 @@ class DataBase():
         conn.close()
         if create_complete:
             print(f'Table {tablename} successfully created.')
+            self.table_names.cache_clear()  # need to repull table names as just created a new one
         else:
             print(error)
             print(f'\nUnable to create table "{tablename}"\nPerhaps the database is locked?!')
@@ -668,6 +674,7 @@ class DataBase():
             return
 
         self._pull_table_cache.pop(tablename, None)  # clear cache for this table as table has been dropped
+        self.table_names.cache_clear()  # need to repull table names as just (likely) deleted one
 
 
     def copy_table(self, other_db, tablename: str, new_tablename: str='', column_case: str='same', progress_handler=None):
@@ -680,7 +687,7 @@ class DataBase():
             print(f'Table "{tablename}" not found.  Table copy aborted.')
             return
 
-        data = other_db.pull_table(tablename, clear_cache=True, progress_handler=progress_handler)  # clearing cache to ensure fresh pull
+        data = other_db.pull(tablename, clear_cache=True, progress_handler=progress_handler)  # clearing cache to ensure fresh pull
         if column_case.lower() == 'lower':
             columns_and_types = {key.lower(): val for key, val in other_db.columns_and_types(tablename).items()}
             table_data = [{col.lower(): val for col, val in d.items()} for d in data]
