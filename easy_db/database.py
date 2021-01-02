@@ -164,7 +164,7 @@ class DataBase():
         return self.pull_table(*args, deprecated=False, **kwargs)
 
 
-    def pull_table(self, tablename: str, columns='all', clear_cache=False, progress_handler=None, deprecated=True) -> list:
+    def pull_table(self, tablename: str, columns='all', fresh=False, progress_handler=None, deprecated=True) -> list:
         '''
         "SELECT *" query for full table as specified from tablename.
         ALSO WORKS for an Access Select query named tablename!
@@ -173,8 +173,8 @@ class DataBase():
         to pull the full table for ONLY those columns.
 
         NOTE!  This function uses caching to avoid extra queries for the same data.
-        clear_cache kwarg provides ability to clear cache and pull data
-        with a fresh query.  Set clear_cache=True in the event that the database
+        "fresh" kwarg provides ability to clear cache and pull data
+        with a fresh query.  Set fresh=True in the event that the database
         table may have been updated since any previous calls.
 
         progress_handler kwarg can be used to provide status updates to a callback.
@@ -193,7 +193,7 @@ class DataBase():
             print(f'Table or query "{tablename}" not found.  Pull aborted.')
             return []
 
-        if clear_cache:
+        if fresh:
             self._pull_table_cache = {}
             return self.pull(tablename, columns)
         else:
@@ -330,7 +330,7 @@ class DataBase():
         return key_cols
 
 
-    def create_table(self, tablename: str, columns_and_types: dict, force_overwrite: bool=False):
+    def create_table(self, tablename: str, columns_and_types: dict, force_overwrite: bool=False) -> None:
         '''
         Create a table in the database with name "tablename"
 
@@ -396,7 +396,7 @@ class DataBase():
         if not keys:
             return set()
         else:
-            existing_tups = set(tuple(row[key] for key in keys) for row in self.pull(tablename, columns=keys, clear_cache=True))
+            existing_tups = set(tuple(row[key] for key in keys) for row in self.pull(tablename, columns=keys, fresh=True))
             dups = set()
             for d in data:
                 tup = tuple(d[key] for key in keys)
@@ -691,7 +691,7 @@ class DataBase():
             print(f'Table "{tablename}" not found.  Table copy aborted.')
             return
 
-        data = other_db.pull(tablename, clear_cache=True, progress_handler=progress_handler)  # clearing cache to ensure fresh pull
+        data = other_db.pull(tablename, fresh=True, progress_handler=progress_handler)  # clearing cache to ensure fresh pull
         if column_case.lower() == 'lower':
             columns_and_types = {key.lower(): val for key, val in other_db.columns_and_types(tablename).items()}
             table_data = [{col.lower(): val for col, val in d.items()} for d in data]
