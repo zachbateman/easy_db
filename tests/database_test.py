@@ -2,6 +2,7 @@ import unittest
 import sys
 sys.path.insert(1, '..')
 import easy_db
+from datetime import datetime
 
 
 class TestSQLite(unittest.TestCase):
@@ -135,6 +136,21 @@ class TestAccess(unittest.TestCase):
 
     def test_duplicate_deletion(self):
         data = [{'c1': 5, 'c2': 6, 'c3': 7, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 7, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 3, 'c4': 8}, {'c1': 5, 'c2': 0, 'c3': 3, 'c4': 8}]
+        self.db.drop_table('DUP_TABLE')
+        self.db.append('DUP_TABLE', data)
+        self.assertTrue(self.db.pull('DUP_TABLE') == data)
+        self.db.delete_duplicates('DUP_TABLE')
+        self.assertTrue(self.db.pull('DUP_TABLE', clear_cache=True) == data[:3])
+        self.db.delete_duplicates('DUP_TABLE', grouping_columns=['c1', 'c2'])
+        self.assertTrue(len(self.db.pull('DUP_TABLE', clear_cache=True)) == 2)
+        self.db.append('DUP_TABLE', data)
+        self.db.delete_duplicates('DUP_TABLE', grouping_columns=['c1'])
+        self.assertTrue(len(self.db.pull('DUP_TABLE', clear_cache=True)) == 1)
+        self.db.drop_table('DUP_TABLE')
+
+    def test_dup_deletion_dates(self):
+        dt = datetime(2021, 1, 1)
+        data = [{'c1': 5, 'c2': 6, 'c3': 7, 'c4': dt}, {'c1': 5, 'c2': 0, 'c3': 7, 'c4': dt}, {'c1': 5, 'c2': 0, 'c3': 3, 'c4': dt}, {'c1': 5, 'c2': 0, 'c3': 3, 'c4': dt}]
         self.db.drop_table('DUP_TABLE')
         self.db.append('DUP_TABLE', data)
         self.assertTrue(self.db.pull('DUP_TABLE') == data)

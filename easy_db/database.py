@@ -9,6 +9,7 @@ import time
 import random
 from functools import lru_cache
 import tqdm
+from datetime import datetime
 from . import util
 # hidden import below: win32com (pip install pywin32) only needed for .compact_db if using Access db.
 
@@ -194,7 +195,7 @@ class DataBase():
 
         if clear_cache:
             self._pull_table_cache = {}
-            return self.pull_table(tablename, columns)
+            return self.pull(tablename, columns)
         else:
             # check for questionable table/column names
             for name in [tablename] + list(columns):
@@ -472,14 +473,17 @@ class DataBase():
                 print(f'The remaining {len(non_dup_data)} rows are still being appended.\n')
                 data = non_dup_data
 
-
+        is_access = True if self.db_type == 'ACCESS' else False
         def convert_to_sql(value):
             if value is None:
                 return 'NULL'
             elif isinstance(value, str):
                 return f"'{value}'"
+            elif isinstance(value, datetime) and is_access:
+                return f'#{value}#'  # adding "#" on either end makes the Access date insert works
             else:
                 return value
+
         conn, cursor = self.connection(also_cursor=True)
         pbar = tqdm.tqdm(total=len(data))
         original_data_len = len(data)
