@@ -89,8 +89,57 @@ with db as cursor:
     cursor.execute('DELETE * FROM example_table;')
 ```
 
-Thanks for checking out easy_db, and please take a look at the methods of the DataBase class if you'd like to see what other capabilities are available!
 
+
+# easy_db.DataBase Methods
+ - Connect to the database...
+```
+db = easy_db.DataBase(...)
+```
+
+## Pulling Data
+```
+db.pull('tablename')
+db.pull_where('tablename', 'sql_condition')
+db.pull_where_id_in_list('tablename', 'id_column', match_values_list)
+```
+
+## Updating Data
+```
+db.append('tablename', new_table_rows)  # new_table_rows is a list of dicts
+db.update('tablename', 'match_column', 'match_value', 'update_column', 'update_value')
+db.delete_duplicates('tablename')
+```
+
+## Database Info
+```
+db.table_names()
+db.query_names()  # for Access
+db.columns_and_types('tablename')
+db.key_columns('tablename')
+db.size  # property with size of database in GB
+db.compact_db  # compact & repair Access db or vacuum SQLite db
+```
+
+## Table Manipulation
+```
+db.create_table('tablename', columns_and_types)
+db.drop_table('tablename')
+db.copy_table(other_db_with_tablename, 'tablename')
+db.add_column('tablename', 'column')
+db.drop_column('tablename', 'column')
+db.create_index('tablename', 'column')
+```
+
+## Custom Control
+ - context manager handles opening, commiting, and closing connection
+```
+with db as cursor:
+    cursor.execute('SELECT * FROM tablename;')  # execute any SQL statement
+```
+
+
+# Thanks for checking out easy_db!
 
 License
 ----
