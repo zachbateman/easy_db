@@ -20,7 +20,7 @@ class DataBase():
 
     def __init__(self, db_location_str: str='', create_if_none: bool=True) -> None:
         self.db_location_str = db_location_str
-        self._pull_table_cache: dict = {}
+        self._pull_cache: dict = {}
 
         self.db_type = self._find_db_type()
         if self.db_type == 'ACCESS':
@@ -194,7 +194,7 @@ class DataBase():
             return []
 
         if fresh:
-            self._pull_table_cache = {}
+            self._pull_cache = {}
             return self.pull(tablename, columns)
         else:
             # check for questionable table/column names
@@ -203,7 +203,7 @@ class DataBase():
                     return []
 
             requested_data_key = f'{tablename}_' + '_'.join(sorted(columns))  # key string for caching db pulls in dict
-            if requested_data_key not in self._pull_table_cache:
+            if requested_data_key not in self._pull_cache:
                 if columns == 'all':
                     sql = f'SELECT * FROM "{tablename}";'
                 elif isinstance(columns, str):
@@ -218,12 +218,12 @@ class DataBase():
                     else:
                         print('progress_handler is only available for use with a SQLite database.')
 
-                self._pull_table_cache[requested_data_key] = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
+                self._pull_cache[requested_data_key] = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
                 conn.close()
-            return self._pull_table_cache[requested_data_key]
+            return self._pull_cache[requested_data_key]
 
 
-    def pull_table_where(self, tablename: str, condition: str) -> list:
+    def pull_where(self, tablename: str, condition: str) -> list:
         '''
         SELECT * WHERE Query for table as specified from tablename and condition
         Return list of dicts for rows with column names as keys.
@@ -235,7 +235,7 @@ class DataBase():
         return data
 
 
-    def pull_table_where_id_in_list(self, tablename: str, id_col: str, match_values: list, use_multip: bool=False, progressbar: bool=True) -> list:
+    def pull_where_id_in_list(self, tablename: str, id_col: str, match_values: list, use_multip: bool=False, progressbar: bool=True) -> list:
         '''
         Pulls all data from table where id_col value is in the provided match_values.
         '''
@@ -502,7 +502,7 @@ class DataBase():
         pbar.close()
         conn.commit()
         conn.close()
-        self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something has been updated
+        self._pull_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something has been updated
         print(f'Data inserted in "{tablename}" -> {"{:,.0f}".format(original_data_len)} rows')
 
 
@@ -558,7 +558,7 @@ class DataBase():
         else:
             cursor.execute(sql, (update_val, match_val))
         conn.commit()
-        self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
+        self._pull_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
 
 
     def add_column(self, tablename: str, new_col: str, new_type='str'):
@@ -571,7 +571,7 @@ class DataBase():
         with self as cursor:
             cursor.execute(f'ALTER TABLE {tablename} ADD COLUMN {new_col} {new_type};')
         print(f'Column {new_col} added to {tablename}.')
-        self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
+        self._pull_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
 
 
     def drop_column(self, tablename: str, column: str):
@@ -584,7 +584,7 @@ class DataBase():
             cursor.execute(f'ALTER TABLE {tablename} DROP COLUMN "{column}";')
 
         print(f'Column {column} removed from {tablename}')
-        self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
+        self._pull_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
 
 
     def delete_duplicates(self, tablename: str, grouping_columns=None):
@@ -605,7 +605,7 @@ class DataBase():
         if self.db_type == 'SQLITE':
             with self as cursor:
                 cursor.execute(f'DELETE FROM {tablename} WHERE rowid NOT IN (SELECT max(rowid) FROM {tablename} GROUP BY {", ".join(grouping_columns)})')
-            self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
+            self._pull_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
 
         elif self.db_type == 'ACCESS':
             # TODO:  Think some sort of SQL can accomplish dup deletion better than in Python... haven't figured it out yet
@@ -634,7 +634,7 @@ class DataBase():
             with self as cursor:
                 cursor.execute(f'DELETE * FROM {tablename};')
             self.append(tablename, list(reversed(new_data)), safe=True, robust=False)  # UN-reverse table entries
-            self._pull_table_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something has been updated
+            self._pull_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something has been updated
 
 
     def create_index(self, tablename: str, column: str, index_name: str='', unique: bool=False):
@@ -677,7 +677,7 @@ class DataBase():
             print('ERROR!  Table deletion only implemented in SQLite and Access currently.')
             return
 
-        self._pull_table_cache.pop(tablename, None)  # clear cache for this table as table has been dropped
+        self._pull_cache.pop(tablename, None)  # clear cache for this table as table has been dropped
         self.table_names.cache_clear()  # need to repull table names as just (likely) deleted one
 
 

@@ -28,7 +28,7 @@ class TestSQLite(unittest.TestCase):
         self.assertTrue(len(tables) == 3)
         self.assertTrue(tables == sorted(tables))
 
-    def test_full_table_pull(self):
+    def test_full_pull(self):
         test_table_data = self.db.pull('TEST_TABLE')
         print(test_table_data[0])
         self.assertTrue(type(test_table_data) == list)
@@ -42,7 +42,7 @@ class TestSQLite(unittest.TestCase):
         self.assertTrue(type(test_table_data[0]) == dict)
         self.assertTrue(len(test_table_data) == 31)
 
-    def test_full_table_pull_specific_columns(self):
+    def test_full_pull_specific_columns(self):
         test_table_data = self.db.pull('TEST_TABLE', columns=('row_id', 'value_1'))
         print(test_table_data[0])
         self.assertTrue(type(test_table_data) == list)
@@ -50,8 +50,8 @@ class TestSQLite(unittest.TestCase):
         self.assertTrue(len(test_table_data) == 31)
         self.assertTrue(len(test_table_data[0].keys()) == 2)
 
-    def test_pull_table_where_id_in_list(self):
-        test_pulled_data = self.db.pull_table_where_id_in_list('THIRD_TABLE', 'parameter', [0.66, 0.67], use_multip=False)
+    def test_pull_where_id_in_list(self):
+        test_pulled_data = self.db.pull_where_id_in_list('THIRD_TABLE', 'parameter', [0.66, 0.67], use_multip=False)
         self.assertTrue(len(test_pulled_data) == 116)
         self.assertTrue(all(d['parameter'] in [0.66, 0.67] for d in test_pulled_data))
 
