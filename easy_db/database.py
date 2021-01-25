@@ -223,12 +223,17 @@ class DataBase():
             return self._pull_cache[requested_data_key]
 
 
-    def pull_where(self, tablename: str, condition: str) -> list:
+    def pull_where(self, tablename: str, condition: str, columns='all') -> list:
         '''
         SELECT * WHERE Query for table as specified from tablename and condition
         Return list of dicts for rows with column names as keys.
         '''
-        sql = f'SELECT * FROM {tablename} WHERE {condition};'
+        if columns == 'all':
+            sql = f'SELECT * FROM {tablename} WHERE {condition};'
+        elif isinstance(columns, list):  # list of columns to pull
+            sql = f'SELECT {", ".join(columns)} FROM {tablename} WHERE {condition};'
+        else:
+            print('Columns kwarg for .pull_where must be a list of column names.')
         conn, cursor = self.connection(also_cursor=True)
         data = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
         conn.close()

@@ -50,6 +50,10 @@ class TestSQLite(unittest.TestCase):
         self.assertTrue(len(test_table_data) == 31)
         self.assertTrue(len(test_table_data[0].keys()) == 2)
 
+    def test_pull_where(self):
+        test_pulled_data = self.db.pull_where('THIRD_TABLE', 'parameter=0.66', columns=['row_id', 'result'])
+        self.assertTrue(list(test_pulled_data[0].keys()) == ['row_id', 'result'])
+
     def test_pull_where_id_in_list(self):
         test_pulled_data = self.db.pull_where_id_in_list('THIRD_TABLE', 'parameter', [0.66, 0.67], use_multip=False)
         self.assertTrue(len(test_pulled_data) == 116)
@@ -235,7 +239,6 @@ class TestUtil(unittest.TestCase):
         self.assertTrue(easy_db.util.similar_type('int', 'FLOAT64'))
         self.assertTrue(easy_db.util.similar_type('STR', 'text'))
         self.assertTrue(easy_db.util.similar_type('datetime64', 'DATE   '))
-
 
 
 
