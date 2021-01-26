@@ -240,13 +240,16 @@ class DataBase():
         return data
 
 
-    def pull_where_id_in_list(self, tablename: str, id_col: str, match_values: list, use_multip: bool=False, progressbar: bool=True) -> list:
+    def pull_where_id_in_list(self, tablename: str, id_col: str, match_values: list, columns='all', use_multip: bool=False, progressbar: bool=True) -> list:
         '''
         Pulls all data from table where id_col value is in the provided match_values.
         '''
         @lru_cache(maxsize=4)
         def sql_str(subset_len: int) -> str:
-            return f"SELECT * FROM [{tablename}] WHERE {id_col} in ({'?,'.join(['' for _ in range(subset_len)])}?);"
+            if columns == 'all':
+                return f"SELECT * FROM [{tablename}] WHERE {id_col} in ({'?,'.join(['' for _ in range(subset_len)])}?);"
+            else:
+                return f"SELECT {', '.join(columns)} FROM [{tablename}] WHERE {id_col} in ({'?,'.join(['' for _ in range(subset_len)])}?);"
 
         if progressbar:
             pbar = tqdm.tqdm(total=len(match_values))

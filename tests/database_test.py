@@ -55,9 +55,10 @@ class TestSQLite(unittest.TestCase):
         self.assertTrue(list(test_pulled_data[0].keys()) == ['row_id', 'result'])
 
     def test_pull_where_id_in_list(self):
-        test_pulled_data = self.db.pull_where_id_in_list('THIRD_TABLE', 'parameter', [0.66, 0.67], use_multip=False)
+        test_pulled_data = self.db.pull_where_id_in_list('THIRD_TABLE', 'parameter', [0.66, 0.67], columns=['row_id', 'parameter'], use_multip=False)
         self.assertTrue(len(test_pulled_data) == 116)
         self.assertTrue(all(d['parameter'] in [0.66, 0.67] for d in test_pulled_data))
+        self.assertTrue(len(test_pulled_data[0].keys()) == 2)
 
     def test_table_creation_and_deletion(self):
         self.db.create_table('TEST_TABLE_CREATION', {'col_1': str, 'col_2': float})
