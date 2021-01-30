@@ -27,7 +27,6 @@ class DataBase():
             self.connection = self._connection_access
             try:
                 conn = self.connection()
-                conn.close()
             except pyodbc.Error as error:
                 print(error)
                 print(f'\nERROR with pyodbc!  Unable to connect to Access Database: {self.db_location_str}')
@@ -299,6 +298,7 @@ class DataBase():
             return []
 
 
+    @lru_cache(maxsize=64)
     def columns_and_types(self, tablename: str) -> dict:
         '''
         Return dict of all column: type pairs in specified table.
@@ -389,6 +389,7 @@ class DataBase():
         if create_complete:
             print(f'Table {tablename} successfully created.')
             self.table_names.cache_clear()  # need to repull table names as just created a new one
+            self.columns_and_types.cache_clear()
         else:
             print(error)
             print(f'\nUnable to create table "{tablename}"\nPerhaps the database is locked?!')
@@ -580,6 +581,7 @@ class DataBase():
             cursor.execute(f'ALTER TABLE {tablename} ADD COLUMN {new_col} {new_type};')
         print(f'Column {new_col} added to {tablename}.')
         self._pull_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
+        self.columns_and_types.cache_clear()
 
 
     def drop_column(self, tablename: str, column: str):
@@ -593,6 +595,7 @@ class DataBase():
 
         print(f'Column {column} removed from {tablename}')
         self._pull_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
+        self.columns_and_types.cache_clear()
 
 
     def delete_duplicates(self, tablename: str, grouping_columns=None):
@@ -650,6 +653,7 @@ class DataBase():
             index_name = column if index_name == '' else index_name  # use column name if not provided
             with self as cursor:
                 cursor.execute(f'CREATE {"UNIQUE " if unique else ""}INDEX {index_name} on {tablename}({column});')
+            self.columns_and_types.cache_clear()
         else:
             print('.create_index is currently only implemented for SQLite databases.')
 
@@ -687,6 +691,7 @@ class DataBase():
 
         self._pull_cache.pop(tablename, None)  # clear cache for this table as table has been dropped
         self.table_names.cache_clear()  # need to repull table names as just (likely) deleted one
+        self.columns_and_types.cache_clear()
 
 
     def copy_table(self, other_db, tablename: str, new_tablename: str='', column_case: str='same', progress_handler=None):
@@ -719,6 +724,7 @@ class DataBase():
         if table_data:
             self.append(tablename, table_data)
         print(f'Table {tablename} copied!')
+        self.columns_and_types.cache_clear()
 
 
     def __repr__(self) -> str:
