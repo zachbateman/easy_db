@@ -26,7 +26,7 @@ class DataBase():
         if self.db_type == 'ACCESS':
             self.connection = self._connection_access
             try:
-                conn = self.connection()
+                self.connection()
             except pyodbc.Error as error:
                 print(error)
                 print(f'\nERROR with pyodbc!  Unable to connect to Access Database: {self.db_location_str}')
@@ -45,9 +45,9 @@ class DataBase():
 
 
 
-    def _find_db_type(self):
+    def _find_db_type(self) -> str:
         '''
-        Figure out what kind of databse is being used.
+        Figure out what kind of database is being used.
         '''
         if self.db_location_str in os.environ:  # Environment Variables are case-insensitive
             print(f'{self.db_location_str} found as Environment Variable.  Substituting database path.')
@@ -158,12 +158,7 @@ class DataBase():
             print(f'Current database is: {self.db_type}')
 
 
-    def pull(self, *args, **kwargs) -> list:
-        '''Shorthand for pull_table'''
-        return self.pull_table(*args, deprecated=False, **kwargs)
-
-
-    def pull_table(self, tablename: str, columns='all', fresh=False, progress_handler=None, deprecated=True) -> list:
+    def pull(self, tablename: str, columns='all', fresh=False, progress_handler=None) -> list:
         '''
         "SELECT *" query for full table as specified from tablename.
         ALSO WORKS for an Access Select query named tablename!
@@ -185,9 +180,6 @@ class DataBase():
 
         Return list of dicts for rows with column names as keys.
         '''
-        if deprecated:
-            print(f'Deprecation Warning:  Please use db.pull() instead of db.pull_table().')
-
         if tablename not in self.table_names() + self.query_names():
             print(f'Table or query "{tablename}" not found.  Pull aborted.')
             return []
@@ -414,7 +406,7 @@ class DataBase():
             return dups
 
 
-    def append(self, tablename: str, data: Union[List[dict], dict], create_table_if_needed: bool=True, safe=False, clean_column_names=False, robust: bool=True):
+    def append(self, tablename: str, data: Union[List[dict], dict], create_table_if_needed: bool=True, safe=False, clean_column_names=False, robust: bool=True) -> None:
         '''
         Append rows of data to database table.
         Create the table in the database if it doesn't exist if create_table_if_needed is True
@@ -515,7 +507,7 @@ class DataBase():
         print(f'Data inserted in "{tablename}" -> {"{:,.0f}".format(original_data_len)} rows')
 
 
-    def update(self, tablename: str, match_col: str, match_val, update_col: str, update_val, progress_handler=None):
+    def update(self, tablename: str, match_col: str, match_val, update_col: str, update_val, progress_handler=None) -> None:
         '''
         Update a database table with a value or values.
 
@@ -570,7 +562,7 @@ class DataBase():
         self._pull_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
 
 
-    def add_column(self, tablename: str, new_col: str, new_type='str'):
+    def add_column(self, tablename: str, new_col: str, new_type='str') -> None:
         '''Add a new column to a database table.'''
         if new_col in self.columns_and_types(tablename):
             print(f'Column {new_col} is already in {tablename}!')
@@ -584,7 +576,7 @@ class DataBase():
         self.columns_and_types.cache_clear()
 
 
-    def drop_column(self, tablename: str, column: str):
+    def drop_column(self, tablename: str, column: str) -> None:
         '''Remove a column from a database table.'''
         if column not in self.columns_and_types(tablename):
             print(f'Column {column} does not exist in {tablename}.')
@@ -598,7 +590,7 @@ class DataBase():
         self.columns_and_types.cache_clear()
 
 
-    def delete_duplicates(self, tablename: str, grouping_columns=None):
+    def delete_duplicates(self, tablename: str, grouping_columns=None) -> None:
         '''
         Delete duplicate rows from a db table while retaining most recently added row.
         Duplicates are determined by grouping based on the grouping_columns kwarg (provide iterable).
@@ -648,7 +640,7 @@ class DataBase():
             self._pull_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something has been updated
 
 
-    def create_index(self, tablename: str, column: str, index_name: str='', unique: bool=False):
+    def create_index(self, tablename: str, column: str, index_name: str='', unique: bool=False) -> None:
         if self.db_type == 'SQLITE':
             index_name = column if index_name == '' else index_name  # use column name if not provided
             with self as cursor:
@@ -658,7 +650,7 @@ class DataBase():
             print('.create_index is currently only implemented for SQLite databases.')
 
 
-    def drop_table(self, tablename: str):
+    def drop_table(self, tablename: str) -> None:
         '''
         Drop/delete the specified table from the database.
         '''
@@ -694,7 +686,7 @@ class DataBase():
         self.columns_and_types.cache_clear()
 
 
-    def copy_table(self, other_db, tablename: str, new_tablename: str='', column_case: str='same', progress_handler=None):
+    def copy_table(self, other_db, tablename: str, new_tablename: str='', column_case: str='same', progress_handler=None) -> None:
         '''
         Copy specified table from other easy_db.DataBase to this DB.
         If desired, column names can be set to be all upper or lower-case
