@@ -488,6 +488,7 @@ class DataBase():
         conn, cursor = self.connection(also_cursor=True)
         pbar = tqdm.tqdm(total=len(data))
         original_data_len = len(data)
+        retry_attempts = 0
         while len(data) > 0:
             try:
                 if safe:
@@ -497,9 +498,14 @@ class DataBase():
                     cursor.executemany(insert_many_sql, [tuple(row_dict[col] for col in columns) for row_dict in data[-100:]])
                 pbar.update(100 if len(data) >= 100 else len(data))
                 data = data[:-100]
-            except sqlite3.OperationalError:  # database is locked
-                print('database locked; retrying')
-                time.sleep(random.random() / 10)
+            except sqlite3.OperationalError as error:  # database is locked
+                if retry_attempts < 5:
+                    retry_attempts += 1
+                    print('Database locked?  Retrying...')
+                    time.sleep(random.random() / 10)
+                else:
+                    print(error)
+                    break
         pbar.close()
         conn.commit()
         conn.close()
