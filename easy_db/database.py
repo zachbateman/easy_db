@@ -474,11 +474,14 @@ class DataBase():
                 print(f'The remaining {len(non_dup_data)} rows are still being appended.\n')
                 data = non_dup_data
 
+        is_sqlite = True if self.db_type == 'SQLITE' else False
         is_access = True if self.db_type == 'ACCESS' else False
         def convert_to_sql(value):
             if value is None:
                 return 'NULL'
             elif isinstance(value, str):
+                return f"'{value}'"
+            elif isinstance(value, datetime) and is_sqlite:
                 return f"'{value}'"
             elif isinstance(value, datetime) and is_access:
                 return f'#{value}#'  # adding "#" on either end makes the Access date insert works
