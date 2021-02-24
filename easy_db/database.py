@@ -300,7 +300,7 @@ class DataBase():
             try:
                 return {col[3]: col[5].lower() for col in cursor.columns(table=tablename)}
             except UnicodeDecodeError:
-                print('\nERROR - Unable to read columns.')
+                print(f'\nERROR - Unable to read columns for table: {tablename}.')
                 print('This may occur if using Access database with column descriptions populated.')
                 print('Try deleting the column descriptions.\n')
                 return {}
@@ -448,7 +448,6 @@ class DataBase():
         if data_cols != columns:
             try:
                 data = [{col: d[col] for col in columns} for d in data]
-                print('Append data column order adjusted to match db table column order.')
             except KeyError:
                 print(f'Error!  Table {tablename} columns do not match the keys of the data to be appended.')
                 print('Try setting robust=True and/or /n  set clean_column_names=True to replace " " and "/" with underscores in data keys.')
