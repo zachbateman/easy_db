@@ -192,7 +192,6 @@ class DataBase():
 
             except KeyError:
                 # check for questionable table/column names
-                print('Running explicit pull')
                 for name in [tablename] + list(columns):
                     if not util.name_clean(name):
                         return []
