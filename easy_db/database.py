@@ -180,21 +180,28 @@ class DataBase():
 
         Return list of dicts for rows with column names as keys.
         '''
-        if tablename not in self.table_names() + self.query_names():
-            print(f'Table or query "{tablename}" not found.  Pull aborted.')
-            return []
-
         if fresh:
-            self._pull_cache = {}
-            return self.pull(tablename, columns)
+            self._clear_pull_cache(tablename)  # clear cache for this table
+            return self.pull(tablename, columns, progress_handler=progress_handler)
+
         else:
-            # check for questionable table/column names
-            for name in [tablename] + list(columns):
-                if not util.name_clean(name):
+            requested_data_key = f'{tablename}_' + '_'.join(sorted(columns))  # key string for caching db pulls in dict
+
+            try:
+                return self._pull_cache[requested_data_key]
+
+            except KeyError:
+                # check for questionable table/column names
+                print('Running explicit pull')
+                for name in [tablename] + list(columns):
+                    if not util.name_clean(name):
+                        return []
+
+                # ensure specified tablename is a valid table (or query possibly in Access)
+                if tablename not in self.table_names() + self.query_names():
+                    print(f'Table or query "{tablename}" not found.  Pull aborted.')
                     return []
 
-            requested_data_key = f'{tablename}_' + '_'.join(sorted(columns))  # key string for caching db pulls in dict
-            if requested_data_key not in self._pull_cache:
                 if columns == 'all':
                     sql = f'SELECT * FROM "{tablename}";'
                 elif isinstance(columns, str):
@@ -211,7 +218,14 @@ class DataBase():
 
                 self._pull_cache[requested_data_key] = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
                 conn.close()
-            return self._pull_cache[requested_data_key]
+                return self._pull_cache[requested_data_key]
+
+
+    def _clear_pull_cache(self, tablename) -> None:
+        '''Fully clear pull cache for all keys related to the specified table.'''
+        for key in list(self._pull_cache.keys()):
+            if tablename in key:
+                self._pull_cache.pop(key, None)
 
 
     def pull_where(self, tablename: str, condition: str, columns='all') -> list:
@@ -511,7 +525,7 @@ class DataBase():
         pbar.close()
         conn.commit()
         conn.close()
-        self._pull_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something has been updated
+        self._clear_pull_cache(tablename)  # clear cache for this table as want new table pull if something has been updated
         print(f'Data inserted in "{tablename}" -> {"{:,.0f}".format(original_data_len)} rows')
 
 
@@ -567,7 +581,7 @@ class DataBase():
         else:
             cursor.execute(sql, (update_val, match_val))
         conn.commit()
-        self._pull_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
+        self._clear_pull_cache(tablename)  # clear cache for this table as want new table pull if something's been updated
 
 
     def add_column(self, tablename: str, new_col: str, new_type='str') -> None:
@@ -580,7 +594,7 @@ class DataBase():
         with self as cursor:
             cursor.execute(f'ALTER TABLE {tablename} ADD COLUMN {new_col} {new_type};')
         print(f'Column {new_col} added to {tablename}.')
-        self._pull_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
+        self._clear_pull_cache(tablename)  # clear cache for this table as want new table pull if something's been updated
         self.columns_and_types.cache_clear()
 
 
@@ -594,7 +608,7 @@ class DataBase():
             cursor.execute(f'ALTER TABLE {tablename} DROP COLUMN "{column}";')
 
         print(f'Column {column} removed from {tablename}')
-        self._pull_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
+        self._clear_pull_cache(tablename)  # clear cache for this table as want new table pull if something's been updated
         self.columns_and_types.cache_clear()
 
 
@@ -616,7 +630,6 @@ class DataBase():
         if self.db_type == 'SQLITE':
             with self as cursor:
                 cursor.execute(f'DELETE FROM {tablename} WHERE rowid NOT IN (SELECT max(rowid) FROM {tablename} GROUP BY {", ".join(grouping_columns)})')
-            self._pull_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something's been updated
 
         elif self.db_type == 'ACCESS':
             # TODO:  Think some sort of SQL can accomplish dup deletion better than in Python... haven't figured it out yet
@@ -645,7 +658,8 @@ class DataBase():
             with self as cursor:
                 cursor.execute(f'DELETE * FROM {tablename};')
             self.append(tablename, list(reversed(new_data)), safe=True, robust=False)  # UN-reverse table entries
-            self._pull_cache.pop(tablename, None)  # clear cache for this table as want new table pull if something has been updated
+
+        self._clear_pull_cache(tablename)  # clear cache for this table as want new table pull if something has been updated
 
 
     def create_index(self, tablename: str, column: str, index_name: str='', unique: bool=False) -> None:
@@ -689,7 +703,7 @@ class DataBase():
             print('ERROR!  Table deletion only implemented in SQLite and Access currently.')
             return
 
-        self._pull_cache.pop(tablename, None)  # clear cache for this table as table has been dropped
+        self._clear_pull_cache(tablename)  # clear cache for this table as table has been dropped
         self.table_names.cache_clear()  # need to repull table names as just (likely) deleted one
         self.columns_and_types.cache_clear()
 
