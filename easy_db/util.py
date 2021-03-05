@@ -4,6 +4,7 @@ Utility functions for easy_db.
 import os
 import sqlite3, pyodbc
 from typing import List, Dict, Any
+from datetime import datetime
 
 
 
@@ -26,6 +27,7 @@ def type_map(db_type) -> dict:
                     'text': 'varchar(255)',
                     'varchar': 'varchar(255)',
                     'datetime': 'datetime',
+                    datetime: 'datetime',
                     'timestamp': 'datetime',
                     'smallint': 'integer',
                     None: 'varchar(255)',
@@ -46,7 +48,8 @@ def type_map(db_type) -> dict:
                     'text': 'TEXT',
                     'varchar': 'TEXT',
                     'date': 'DATE',
-                    'datetime': 'DATE',
+                    'datetime': 'TIMESTAMP',
+                    datetime: 'TIMESTAMP',
                     'timestamp': 'TIMESTAMP',
                     'longchar': 'TEXT',
                     'smallint': 'INTEGER',
