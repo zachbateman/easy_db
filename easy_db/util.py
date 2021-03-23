@@ -80,10 +80,13 @@ def check_if_file_is_sqlite(filename: str) -> bool:
         return False
 
 
-def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str, parameters: list=[]) -> List[Dict[str, Any]]:
+def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str, parameters: list=[], columns: list=[]) -> List[Dict[str, Any]]:
     '''
     Query db using cursor, supplied sql, and tablename.
     Return list of dicts for query result.
+
+    Pass in explicit columns kwarg if you know that returned column order will not match table's column order.
+    (This occurs when pulling a subset of columns for example.)
     '''
     try:
         data = cursor.execute(sql, parameters).fetchall()
@@ -93,18 +96,19 @@ def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str, par
         print(f'SQL: {sql}')
         return []
 
-    if db_type == 'SQLITE':
-        columns = [description[0] for description in cursor.description]
-    elif db_type == 'SQL SERVER':
-        columns = [column[0] for column in cursor.description]
-    else:
-        try:
-            columns = [row.column_name for row in cursor.columns(table=tablename)]
-        except UnicodeDecodeError:
-            print('\nERROR - Unable to read column names.')
-            print('This may occur if using Access database with column descriptions populated.')
-            print('Try deleting the column descriptions.\n')
-            return [{}]
+    if not columns:
+        if db_type == 'SQLITE':
+            columns = [description[0] for description in cursor.description]
+        elif db_type == 'SQL SERVER':
+            columns = [column[0] for column in cursor.description]
+        else:
+            try:
+                columns = [row.column_name for row in cursor.columns(table=tablename)]
+            except UnicodeDecodeError:
+                print('\nERROR - Unable to read column names.')
+                print('This may occur if using Access database with column descriptions populated.')
+                print('Try deleting the column descriptions.\n')
+                return [{}]
     return [dict(zip(columns, row)) for row in data]  # table data
 
 

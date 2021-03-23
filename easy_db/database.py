@@ -215,7 +215,7 @@ class DataBase():
                     else:
                         print('progress_handler is only available for use with a SQLite database.')
 
-                self._pull_cache[requested_data_key] = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
+                self._pull_cache[requested_data_key] = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type, columns=columns if isinstance(columns, list) else [])
                 conn.close()
                 return self._pull_cache[requested_data_key]
 
@@ -234,12 +234,14 @@ class DataBase():
         '''
         if columns == 'all':
             sql = f'SELECT * FROM {tablename} WHERE {condition};'
+        elif isinstance(columns, str):
+            columns = [columns]  # convert to list for a single user-provided column string
         elif isinstance(columns, list):  # list of columns to pull
             sql = f'SELECT {", ".join(columns)} FROM {tablename} WHERE {condition};'
         else:
             print('Columns kwarg for .pull_where must be a list of column names.')
         conn, cursor = self.connection(also_cursor=True)
-        data = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
+        data = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type, columns=columns if isinstance(columns, list) else [])
         conn.close()
         return data
 
@@ -248,6 +250,9 @@ class DataBase():
         '''
         Pulls all data from table where id_col value is in the provided match_values.
         '''
+        if isinstance(columns, str) and columns != 'all':
+            columns = [columns]
+
         @lru_cache(maxsize=4)
         def sql_str(subset_len: int) -> str:
             if columns == 'all':
@@ -263,7 +268,7 @@ class DataBase():
         while len(match_values) > 0:
             subset = match_values[:100]
             sql = sql_str(len(subset))
-            data.extend(util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type, subset))
+            data.extend(util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type, subset, columns=columns if isinstance(columns, list) else []))
             match_values = match_values[100:]
             if progressbar:
                 pbar.update(100)
