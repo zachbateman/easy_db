@@ -26,6 +26,7 @@ def type_map(db_type) -> dict:
                     'str': 'varchar(255)',
                     'text': 'varchar(255)',
                     'varchar': 'varchar(255)',
+                    'date': 'datetime',
                     'datetime': 'datetime',
                     datetime: 'datetime',
                     'timestamp': 'datetime',
@@ -177,8 +178,11 @@ def clean_data(data, columns_and_types, db_type) -> List[dict]:
 
         for col, value in d.items():
             d_type = type(value).__name__.lower()
-            if not similar_type(columns_and_types[col], t_map[d_type]):  # fix value/type in dict
+            # now if string d_type, check if it's actually a date that can be handled even though in string format
+            if d_type == 'str' and len(value) == 10 and value[4] == '-' and value[7] == '-':  # string like 'YYYY-MM-DD'
+                d_type == 'date'
 
+            if not similar_type(columns_and_types[col], t_map[d_type]):  # fix value/type in dict
                 if similar_type(columns_and_types[col], 'float'):
                     try:
                         d[col] = float(value if not isinstance(value, str) else value.strip())
