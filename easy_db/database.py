@@ -246,7 +246,7 @@ class DataBase():
         return data
 
 
-    def pull_where_id_in_list(self, tablename: str, id_col: str, match_values: list, columns='all', use_multip: bool=False, progressbar: bool=True) -> list:
+    def pull_where_id_in_list(self, tablename: str, id_col: str, match_values: list, columns='all', use_multip: bool=False, progressbar: bool=False) -> list:
         '''
         Pulls all data from table where id_col value is in the provided match_values.
         '''
@@ -424,7 +424,7 @@ class DataBase():
             return dups
 
 
-    def append(self, tablename: str, data: Union[List[dict], dict], create_table_if_needed: bool=True, safe=False, clean_column_names=False, robust: bool=True) -> None:
+    def append(self, tablename: str, data: Union[List[dict], dict], create_table_if_needed: bool=True, safe=False, clean_column_names=False, robust: bool=True, progressbar: bool=None) -> None:
         '''
         Append rows of data to database table.
         Create the table in the database if it doesn't exist if create_table_if_needed is True
@@ -442,6 +442,12 @@ class DataBase():
         if not data:  # check to ensure provided data actually contains rows of data
             print('No data provided to append.')
             return
+
+        if progressbar is None:
+            if len(data) < 1000:
+                progressbar = False
+            else:
+                progressbar = True
 
         if isinstance(data, dict):  # handle case of single row append by converting it to a list
             data = [data]
@@ -506,7 +512,8 @@ class DataBase():
                 return value
 
         conn, cursor = self.connection(also_cursor=True)
-        pbar = tqdm.tqdm(total=len(data))
+        if progressbar:
+            pbar = tqdm.tqdm(total=len(data))
         original_data_len = len(data)
         retry_attempts = 0
         while len(data) > 0:
@@ -516,7 +523,8 @@ class DataBase():
                         cursor.execute(insert_sql + '(' + ','.join([f'{convert_to_sql(row[col])}' for col in columns]) + ');')
                 else:
                     cursor.executemany(insert_many_sql, [tuple(row_dict[col] for col in columns) for row_dict in data[-100:]])
-                pbar.update(100 if len(data) >= 100 else len(data))
+                if progressbar:
+                    pbar.update(100 if len(data) >= 100 else len(data))
                 data = data[:-100]
             except sqlite3.OperationalError as error:  # database is locked
                 if retry_attempts < 5:
@@ -526,7 +534,8 @@ class DataBase():
                 else:
                     print(error)
                     break
-        pbar.close()
+        if progressbar:
+            pbar.close()
         conn.commit()
         conn.close()
         self._clear_pull_cache(tablename)  # clear cache for this table as want new table pull if something has been updated
