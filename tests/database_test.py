@@ -217,6 +217,21 @@ class TestAccess(unittest.TestCase):
         self.assertTrue(len(data)>0)
 
 
+class TestMisc(unittest.TestCase):
+
+    def setUp(self):
+        self.db = easy_db.DataBase('misc_db.db')
+        self.db.append('TEST', [{'a': 5, 'b': 6}, {'a': 8, 'b': 9}, {'a': 10, 'b': 15}])
+
+    def test_execute(self):
+        self.db.execute('SELECT * FROM TEST;')
+        self.db.execute('CREATE TABLE TEST2(c)')
+        self.db.execute('DROP TABLE TEST2')
+        self.assertTrue(len(self.db.execute('SELECT * FROM TEST;')) == 3)
+        self.db.execute('DELETE from TEST;')
+        self.assertTrue(len(self.db.pull('TEST')) == 0)
+
+
 class TestUtil(unittest.TestCase):
 
     def setUp(self):

@@ -10,3 +10,4 @@ easy_db.egg-info/
 
 *.accdb
 *.laccdb
+*.db

@@ -158,6 +158,22 @@ class DataBase():
             print(f'Current database is: {self.db_type}')
 
 
+    def execute(self, sql: str, parameters: list=[]):
+        '''
+        Shortcut for cursor.execute().
+
+        Return similar to how cursor.execute() behaves.  That is, if a SELECT query, return selected data.
+        If no return data, return None.
+        '''
+        with self as cursor:
+            query = cursor.execute(sql, parameters)
+            try:
+                result = query.fetchall()
+                return result if result else None
+            except:
+                return None
+
+
     def pull(self, tablename: str, columns='all', fresh=False, progress_handler=None) -> list:
         '''
         "SELECT *" query for full table as specified from tablename.

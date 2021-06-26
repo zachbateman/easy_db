@@ -132,11 +132,15 @@ db.create_index('tablename', 'column')
 ```
 
 ## Custom Control
- - context manager handles opening, commiting, and closing connection
+ - Context manager handles opening, commiting, and closing connection
 ```
 with db as cursor:
     cursor.execute('SELECT * FROM tablename;')  # execute any SQL statement
 ```
+ - Can also run .execute() on the database itself (shortcut for the above)
+ ```
+ db.execute('SELECT * FROM tablename;')
+ ```
 
 
 # Thanks for checking out easy_db!
