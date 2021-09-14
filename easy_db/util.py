@@ -182,6 +182,14 @@ def clean_data(data, columns_and_types, db_type) -> List[dict]:
             if d_type == 'str' and len(value) == 10 and value[4] == '-' and value[7] == '-':  # string like 'YYYY-MM-DD'
                 d_type == 'date'
 
+            # now can have case of a timestamp that's a pandas/numpy timestamp which causes problems with sqlite...
+            # attempt to convert to python's normal datetime using the .to_pydatetime method in those cases
+            if d_type == 'timestamp':
+                try:
+                    d[col] = value.to_pydatetime()
+                except AttributeError:  # nothing happens if not a pandas/numpy timestamp
+                    pass
+
             if not similar_type(columns_and_types[col], t_map[d_type]):  # fix value/type in dict
                 if similar_type(columns_and_types[col], 'float'):
                     try:

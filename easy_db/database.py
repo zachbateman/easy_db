@@ -540,17 +540,19 @@ class DataBase():
                 else:
                     try:
                         cursor.executemany(insert_many_sql, [tuple(row_dict[col] for col in columns) for row_dict in data[-100:]])
-                    except pyodbc.IntegrityError:  # may occur if null value provided for index/primary key column
+                    except (pyodbc.IntegrityError, sqlite3.InterfaceError):
                         # this section is just intended to help debug issues with input data by printing problematic data
-                        for row_dict in data[-100]:
+                        # pyodbc.IntegrityError may occur if null value provided for index/primary key column
+                        # sqlite3.InterfaceError may occur if an unsupported data type is provided
+                        for row_dict in data[-100:]:
                             try:
-                                cursor.execute_many(insert_many_sql, [tuple(row_dict[col] for col in columns)])
-                            except pyodbc.IntegrityError as error:
-                                print('\n\npyodbc.IntegrityError triggered!  Triggering input row shown below:')
+                                cursor.executemany(insert_many_sql, [tuple(row_dict[col] for col in columns)])
+                            except (pyodbc.IntegrityError, sqlite3.InterfaceError):
+                                print('\n\n\n' + '-'*50 + 'ERROR!  Triggering input row shown below:')
                                 for key, val in row_dict.items():
                                     print(f'    {col.ljust(15)}   |   {val}')
-                                # now call the offending statement again... to trigger exception messaging and exit
-                                cursor.execute_many(insert_many_sql, [tuple(row_dict[col] for col in columns)])
+                                print('-'*50 + '\n')
+                                cursor.executemany(insert_many_sql, [tuple(row_dict[col] for col in columns)])  # call again to trigger exception messaging and exit
 
                 if progressbar:
                     pbar.update(100 if len(data) >= 100 else len(data))
