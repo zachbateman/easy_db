@@ -469,7 +469,6 @@ class DataBase():
             data = [data]
 
         if clean_column_names:
-            print('Cleaning column names in data to be appended.')
             for key in list(data[0].keys()):
                 for row in data:
                     row[util.clean_column_name(key)] = row.pop(key)
@@ -494,7 +493,7 @@ class DataBase():
                 return
 
         if self.db_type == 'SQLITE':
-            insert_sql = f"INSERT INTO '{tablename}' ({','.join(columns)}) VALUES "
+            insert_sql = f"INSERT INTO '{tablename}' ({','.join([f'[{col}]' for col in columns])}) VALUES "
         else:
             insert_sql = f"INSERT INTO [{tablename}] ({', '.join(columns)}) VALUES "
         insert_many_sql = insert_sql + f"({', '.join(['?' for _ in range(len(columns))])});"
@@ -506,7 +505,7 @@ class DataBase():
             if dup_rows:
                 non_dup_data = [d for d in data if tuple(d[key] for key in key_cols) not in dup_rows]
                 skip_count = len(data) - len(non_dup_data)
-                print(f"\n{skip_count} row{'s' if skip_count > 1 else ''} {'were' if skip_count > 1 else 'was'} skipped in .append due to being primary key duplicates\n  of rows that already exist in table: {tablename}")
+                print(f"\n{skip_count} row{'s were' if skip_count > 1 else ' was'} skipped in .append due to being primary key duplicates\n  of rows that already exist in table: {tablename}")
                 if not non_dup_data:
                     print('No remaining data to append.')
                     return

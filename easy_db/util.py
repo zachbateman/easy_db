@@ -133,6 +133,7 @@ def name_clean(name: str) -> bool:
     return True
 
 
+column_name_changes = set()
 def clean_column_name(col_name: str) -> str:
     '''
     Used to ensure column names do not have spaces or forward slashes
@@ -147,7 +148,10 @@ def clean_column_name(col_name: str) -> str:
         col_name = col_name.replace('/', '_')
         changed = True
     if changed:
-        print(f'Column Name {original_col_name} changed to {col_name}')
+        change = f'Column Name {original_col_name} changed to {col_name}'
+        if change not in column_name_changes:
+            column_name_changes.add(change)
+            print(change)
     return col_name
 
 
