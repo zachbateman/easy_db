@@ -17,6 +17,7 @@ def type_map(db_type) -> dict:
         return {float: 'double',
                     'float': 'double',
                     'double': 'double',
+                    'real': 'double',
                     'float64': 'double',
                     'numpy.float64': 'double',
                     int: 'integer',
