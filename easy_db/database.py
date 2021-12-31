@@ -94,9 +94,27 @@ class DataBase():
             raise FileNotFoundError(error_str)
 
         absolute_path = os.path.abspath(self.db_location_str)  # NEED AN ABSOLUTE PATH FOR PYODBC!!!
-        conn = pyodbc.connect(
-            r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};" +
-            r'Dbq=' + absolute_path + ';')
+
+        # try to connect a few times if first pass fails
+        # may occur if the Access locking/unlocking process is taking longer than usual
+        conn, tries = None, 0
+        while conn is None:
+            try:
+                tries += 1
+                conn = pyodbc.connect(
+                    r'Driver={Microsoft Access Driver (*.mdb, *.accdb)};' +
+                    r'Dbq=' + absolute_path + ';')
+            except pyodbc.Error:
+                time.sleep(0.7)  # time delay so Access can hopefully get unlocked
+            if tries > 5:
+                break
+
+        # now try again one more time to get the pyodbc error message/traceback
+        if conn is None:
+            conn = pyodbc.connect(
+                r'Driver={Microsoft Access Driver (*.mdb, *.accdb)};' +
+                r'Dbq=' + absolute_path + ';')
+
         if also_cursor:
             return conn, conn.cursor()
         else:
@@ -201,7 +219,10 @@ class DataBase():
             return self.pull(tablename, columns, progress_handler=progress_handler)
 
         else:
-            requested_data_key = f'{tablename}_' + '_'.join(sorted(columns))  # key string for caching db pulls in dict
+            if columns == 'all':
+                requested_data_key = tablename
+            else:
+                requested_data_key = f'{tablename}_' + '_'.join(sorted(columns))  # key string for caching db pulls in dict
 
             try:
                 return self._pull_cache[requested_data_key]
