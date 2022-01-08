@@ -402,7 +402,7 @@ class DataBase():
 
         columns_and_types = {util.clean_column_name(col): v.lower() if isinstance(v, str) else v for col, v in columns_and_types.items()}  # make sure column names are good
         try:
-            column_types = ', '.join([f'{col} {type_map[v]}' for col, v in columns_and_types.items()])
+            column_types = ', '.join([f'[{col}] {type_map[v]}' for col, v in columns_and_types.items()])
         except KeyError:
             type_values = set(columns_and_types.values())
             keys_not_in_type_map = [str(type_val) for type_val in type_values if type_val not in type_map]
@@ -516,7 +516,7 @@ class DataBase():
         if self.db_type == 'SQLITE':
             insert_sql = f"INSERT INTO '{tablename}' ({','.join([f'[{col}]' for col in columns])}) VALUES "
         else:
-            insert_sql = f"INSERT INTO [{tablename}] ({', '.join(columns)}) VALUES "
+            insert_sql = f"INSERT INTO [{tablename}] ({', '.join([f'[{col}]' for col in columns])}) VALUES "
         insert_many_sql = insert_sql + f"({', '.join(['?' for _ in range(len(columns))])});"
 
         # Check for potential duplicate (key) entries if Access to avoid pyodbc error and crash of whole append.
@@ -631,7 +631,7 @@ class DataBase():
             else:
                 print('progress_handler is only available for use with a SQLite database.')
 
-        sql = f'UPDATE {tablename} SET {update_col}=? WHERE {match_col}=?;'  # can't pass column names in execute statement, just values
+        sql = f'UPDATE {tablename} SET [{update_col}]=? WHERE [{match_col}]=?;'  # can't pass column names in execute statement, just values
         if isinstance(match_val, (list, tuple)):
             if isinstance(update_val, (list, tuple)):  # many rows to update
                 if len(match_val) != len(update_val) and not isinstance(update_val, str):  # many rows to update with same number of values
