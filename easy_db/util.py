@@ -2,7 +2,11 @@
 Utility functions for easy_db.
 '''
 import os
-import sqlite3, pyodbc
+import sqlite3
+try:
+    import pyodbc
+except Exception:
+    pass
 from typing import List, Dict, Any
 from datetime import datetime
 

@@ -3,7 +3,10 @@ Module containing easy_db DataBase class.
 '''
 from typing import Union, List
 import sqlite3
-import pyodbc
+try:
+    import pyodbc
+except Exception:
+    pass
 import os
 import time
 import random
