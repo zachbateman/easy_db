@@ -717,14 +717,19 @@ class DataBase():
             data = self.pull(tablename)
             existing_combos = set()
             new_data = []
+            duplicate_found = False
             for row in reversed(data):
                 row_combo = tuple(row[col] for col in grouping_columns)
                 if row_combo not in existing_combos:
                     new_data.append(row)
                     existing_combos.add(row_combo)
-            with self as cursor:
-                cursor.execute(f'DELETE * FROM {tablename};')
-            self.append(tablename, list(reversed(new_data)), safe=True, robust=False)  # UN-reverse table entries
+                elif row_combo in existing_combos:
+                    duplicate_found = True
+
+            if duplicate_found:  # don't delete and recreate table if no duplicates were found (no changes)
+                with self as cursor:
+                    cursor.execute(f'DELETE * FROM {tablename};')
+                self.append(tablename, list(reversed(new_data)), safe=True, robust=False)  # UN-reverse table entries
 
         self._clear_pull_cache(tablename)  # clear cache for this table as want new table pull if something has been updated
 
