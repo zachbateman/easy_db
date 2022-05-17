@@ -24,6 +24,7 @@ class DataBase():
     def __init__(self, db_location_str: str='', create_if_none: bool=True) -> None:
         self.db_location_str = db_location_str
         self._pull_cache: dict = {}
+        self._conn_cache = None
 
         self.db_type = self._find_db_type()
         if self.db_type == 'ACCESS':
@@ -67,7 +68,7 @@ class DataBase():
             return 'Database not recognized!'
 
 
-    def _connection_sqlite(self, also_cursor: bool=False, create_if_none: bool=False):
+    def _connection_sqlite(self, also_cursor: bool=False, create_if_none: bool=False, **kwargs):
         '''
         Return a connection object to the Sqlite Database.
         '''
@@ -83,9 +84,12 @@ class DataBase():
             print('Please first create this database or specify create_if_none=True.')
 
 
-    def _connection_access(self, also_cursor: bool=False):
+    def _connection_access(self, also_cursor: bool=False, cache_conn: bool=False, **kwargs):
         '''
         Return a connection object to the Access Database.
+        cache_conn kwarg specified as True will cache the same access connection to
+        greatly improve performance if this a collection is called for many times.
+        (For example many db.update(..., cache_conn=True) calls in a row.)
         '''
         if not os.path.isfile(self.db_location_str):
             if '.accdb' in self.db_location_str and os.path.isfile(self.db_location_str.replace('.accdb', '.mdb')):
@@ -97,6 +101,13 @@ class DataBase():
             raise FileNotFoundError(error_str)
 
         absolute_path = os.path.abspath(self.db_location_str)  # NEED AN ABSOLUTE PATH FOR PYODBC!!!
+
+        # Shortcut to cached connection if desired
+        if cache_conn and self._conn_cache:
+            if also_cursor:
+                return self._conn_cache, self._conn_cache.cursor()
+            else:
+                return self._conn_cache
 
         # try to connect a few times if first pass fails
         # may occur if the Access locking/unlocking process is taking longer than usual
@@ -118,13 +129,17 @@ class DataBase():
                 r'Driver={Microsoft Access Driver (*.mdb, *.accdb)};' +
                 r'Dbq=' + absolute_path + ';')
 
+        # If want to cache but didn't have saved previously for early return, save conn now for later calls
+        if cache_conn:
+            self._conn_cache = conn
+
         if also_cursor:
             return conn, conn.cursor()
         else:
             return conn
 
 
-    def _connection_sql_server(self, also_cursor: bool=False):
+    def _connection_sql_server(self, also_cursor: bool=False, **kwargs):
         '''
         Return a connection object to the SQL Server Database.
         '''
@@ -596,7 +611,7 @@ class DataBase():
         print(f'Data inserted in "{tablename}" -> {"{:,.0f}".format(original_data_len)} rows')
 
 
-    def update(self, tablename: str, match_col: str, match_val, update_col: str, update_val, progress_handler=None) -> None:
+    def update(self, tablename: str, match_col: str, match_val, update_col: str, update_val, progress_handler=None, cache_conn: bool=False) -> None:
         '''
         Update a database table with a value or values.
 
@@ -618,6 +633,9 @@ class DataBase():
         to the sqlite3 conn.set_progress_handler function that specifies
         the interval at which the callback is called. (# of SQLite instructions)
         Basically, a larger "n" value reduces the number of callbacks.
+
+        cache_conn kwarg can be used (Access ONLY!) to cache the database connection between separate update calls
+        This greatly improves performance for many updates without having to otherwise manage the connection.
         '''
         # Abort update if match or update column does not exist in the table (may be misspelled or just missing)
         table_columns = set(self.columns_and_types(tablename).keys())
@@ -626,7 +644,7 @@ class DataBase():
                 print(f'UPDATE FAILED!  Column "{col}" not in {tablename}.')
                 return
 
-        conn, cursor = self.connection(also_cursor=True)
+        conn, cursor = self.connection(also_cursor=True, cache_conn=cache_conn)
 
         if progress_handler is not None:
             if self.db_type == 'SQLITE':  # progress_handler only currently working for sqlite
