@@ -635,16 +635,22 @@ class DataBase():
                 print('progress_handler is only available for use with a SQLite database.')
 
         sql = f'UPDATE {tablename} SET [{update_col}]=? WHERE [{match_col}]=?;'  # can't pass column names in execute statement, just values
-        if isinstance(match_val, (list, tuple)):
-            if isinstance(update_val, (list, tuple)):  # many rows to update
+        if isinstance(match_val, (list, tuple)):  # Many rows to update
+            if isinstance(update_val, (list, tuple)):  #  Many values to update
                 if len(match_val) != len(update_val) and not isinstance(update_val, str):  # many rows to update with same number of values
                     print('ERROR!  The number of match values must equal the number of update values!')
                     return
                 for m_val, u_val in tqdm.tqdm(zip(match_val, update_val), total=len(match_val)):
                     cursor.execute(sql, (u_val, m_val))
-            else:  # case of many rows to update with same value
-                for m_val in tqdm.tqdm(match_val, total=len(match_val)):
-                    cursor.execute(sql, (update_val, m_val))
+            else:  # Many rows to update with the same value; run in chucks of 100 rows each
+                with tqdm.tqdm(total=len(match_val)) as pbar:
+                    while match_val:
+                        match_to_update = match_val[:100]
+                        num_updates = len(match_to_update)
+                        match_val = match_val[100:]
+                        sql = f'UPDATE {tablename} SET [{update_col}]=? WHERE [{match_col}] IN ({",".join(["?" for _ in range(num_updates)])});'
+                        cursor.execute(sql, (update_val, *match_to_update))
+                        pbar.update(num_updates)
         else:
             cursor.execute(sql, (update_val, match_val))
         conn.commit()
