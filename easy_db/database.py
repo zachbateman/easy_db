@@ -9,6 +9,7 @@ except Exception:
     pass
 import os
 import time
+import math
 import random
 from functools import lru_cache
 import tqdm
@@ -553,6 +554,8 @@ class DataBase():
 
         is_sqlite = True if self.db_type == 'SQLITE' else False
         is_access = True if self.db_type == 'ACCESS' else False
+
+        math_isnan = math.isnan  # just assigning here so don't need dot lookup in below heavily-used function
         def convert_to_sql(value):
             if value is None:
                 return 'NULL'
@@ -565,6 +568,8 @@ class DataBase():
                     return f'#{value}#'  # adding "#" on either end makes the Access date insert works
                 else:
                     return value
+            elif math_isnan(value):
+                return 'NULL'
             else:
                 return value
 
