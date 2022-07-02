@@ -558,10 +558,13 @@ class DataBase():
                 return 'NULL'
             elif isinstance(value, str):
                 return f"'{value}'"
-            elif isinstance(value, datetime) and is_sqlite:
-                return f"'{value}'"
-            elif isinstance(value, datetime) and is_access:
-                return f'#{value}#'  # adding "#" on either end makes the Access date insert works
+            elif isinstance(value, datetime):
+                if is_sqlite:
+                    return f"'{value}'"
+                elif is_access:
+                    return f'#{value}#'  # adding "#" on either end makes the Access date insert works
+                else:
+                    return value
             else:
                 return value
 
