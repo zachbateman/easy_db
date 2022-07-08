@@ -759,8 +759,7 @@ class DataBase():
                     duplicate_found = True
 
             if duplicate_found:  # don't delete and recreate table if no duplicates were found (no changes)
-                with self as cursor:
-                    cursor.execute(f'DELETE * FROM {tablename};')
+                self.clear_table(tablename)
                 self.append(tablename, list(reversed(new_data)), safe=True, robust=False)  # UN-reverse table entries
 
         self._clear_pull_cache(tablename)  # clear cache for this table as want new table pull if something has been updated
@@ -774,6 +773,17 @@ class DataBase():
             self.columns_and_types.cache_clear()
         else:
             print('.create_index is currently only implemented for SQLite databases.')
+
+
+    def clear_table(self, tablename: str) -> None:
+        '''
+        Delete/clear contents of a table, but leave the table itself and the column/type structure.
+        Shortcut/convenience method.
+        '''
+        if tablename in self.table_names():
+            with self as cursor:
+                cursor.execute(f'DELETE * FROM {tablename};')
+            self._clear_pull_cache(tablename)  # clear cache for this table as table has been cleared
 
 
     def drop_table(self, tablename: str) -> None:
