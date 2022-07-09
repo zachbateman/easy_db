@@ -60,9 +60,17 @@ class TestSQLite(unittest.TestCase):
         self.assertTrue(all(d['parameter'] in [0.66, 0.67] for d in test_pulled_data))
         self.assertTrue(len(test_pulled_data[0].keys()) == 2)
 
-    def test_table_creation_and_deletion(self):
+    def test_table_creation_and_clearing_and_deletion(self):
         self.db.create_table('TEST_TABLE_CREATION', {'col_1': str, 'col_2': float})
         self.db.append('TEST_TABLE_CREATION', [{'col_1': 'row_A', 'col_2': 1.5}, {'col_1': 'row_B', 'col_2': 3.7}])
+
+        table_data = self.db.pull('TEST_TABLE_CREATION')
+        self.db.clear_table('TEST_TABLE_CREATION')
+        empty_table_data = self.db.pull('TEST_TABLE_CREATION')
+        self.assertTrue(empty_table_data == [])
+        self.db.append('TEST_TABLE_CREATION', table_data)
+        self.assertTrue(table_data == self.db.pull('TEST_TABLE_CREATION'))
+
         self.db.drop_table('TEST_TABLE_CREATION')
         self.assertTrue(True)
 
@@ -129,9 +137,17 @@ class TestAccess(unittest.TestCase):
     def test_size(self):
         self.assertTrue(self.db.size > 0)
 
-    def test_table_creation_and_deletion(self):
+    def test_table_creation_and_clearing_and_deletion(self):
         self.db.create_table('TEST_TABLE_CREATION', {'col_1': str, 'col_2': float})
         self.db.append('TEST_TABLE_CREATION', [{'col_1': 'row_A', 'col_2': 1.5}, {'col_1': 'row_B', 'col_2': 3.7}])
+
+        table_data = self.db.pull('TEST_TABLE_CREATION')
+        self.db.clear_table('TEST_TABLE_CREATION')
+        empty_table_data = self.db.pull('TEST_TABLE_CREATION')
+        self.assertTrue(empty_table_data == [])
+        self.db.append('TEST_TABLE_CREATION', table_data)
+        self.assertTrue(table_data == self.db.pull('TEST_TABLE_CREATION'))
+
         self.db.drop_table('TEST_TABLE_CREATION')
         self.assertTrue(True)
 

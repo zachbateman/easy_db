@@ -110,6 +110,14 @@ class DataBase():
             else:
                 return self._conn_cache
 
+        # If no longer calling for a cached connection, try closing out if exists as best practice
+        if not cache_conn:
+            try:
+                self._conn_cache.close()
+                self._conn_cache = None
+            except Exception:
+                pass
+
         # try to connect a few times if first pass fails
         # may occur if the Access locking/unlocking process is taking longer than usual
         conn, tries = None, 0
@@ -296,10 +304,9 @@ class DataBase():
             sql = f'SELECT {", ".join(columns)} FROM {tablename} WHERE {condition};'
         else:
             print('Columns kwarg for .pull_where must be a list of column names.')
-        conn, cursor = self.connection(also_cursor=True)
-        data = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type, columns=columns if isinstance(columns, list) else [])
-        conn.close()
-        return data
+
+        with self as cursor:
+            return util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type, columns=columns if isinstance(columns, list) else [])
 
 
     def pull_where_id_in_list(self, tablename: str, id_col: str, match_values: list, columns='all', use_multip: bool=False, progressbar: bool=False) -> list:
@@ -319,20 +326,18 @@ class DataBase():
         if progressbar:
             pbar = tqdm.tqdm(total=len(match_values))
 
-        conn, cursor = self.connection(also_cursor=True)
-        data: list = []
-        while len(match_values) > 0:
-            subset = match_values[:100]
-            sql = sql_str(len(subset))
-            data.extend(util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type, subset, columns=columns if isinstance(columns, list) else []))
-            match_values = match_values[100:]
+        with self as cursor:
+            data: list = []
+            while len(match_values) > 0:
+                subset = match_values[:100]
+                sql = sql_str(len(subset))
+                data.extend(util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type, subset, columns=columns if isinstance(columns, list) else []))
+                match_values = match_values[100:]
+                if progressbar:
+                    pbar.update(100)
             if progressbar:
-                pbar.update(100)
+                pbar.update(len(match_values) % 100)
 
-        if progressbar:
-            pbar.update(len(match_values) % 100)
-
-        conn.close()
         return data
 
 
@@ -341,13 +346,13 @@ class DataBase():
         '''
         Return sorted list of all tables in the database.
         '''
-        conn, cursor = self.connection(also_cursor=True)
-        if self.db_type == 'SQLITE':
-            tables = [tup[0] for tup in cursor.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()]
-        elif self.db_type == 'ACCESS':
-            tables = [tup[2] for tup in cursor.tables() if tup[3] == 'TABLE']
-        else:
-            tables = cursor.tables()
+        with self as cursor:
+            if self.db_type == 'SQLITE':
+                tables = [tup[0] for tup in cursor.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()]
+            elif self.db_type == 'ACCESS':
+                tables = [tup[2] for tup in cursor.tables() if tup[3] == 'TABLE']
+            else:
+                tables = cursor.tables()
         return sorted(tables)
 
 
@@ -358,8 +363,8 @@ class DataBase():
         Only works for Access Select queries.
         '''
         if self.db_type == 'ACCESS':
-            conn, cursor = self.connection(also_cursor=True)
-            return sorted(tup[2] for tup in cursor.tables() if tup[3] == 'VIEW')
+            with self as cursor:
+                return sorted(tup[2] for tup in cursor.tables() if tup[3] == 'VIEW')
         else:
             return []
 
@@ -369,28 +374,25 @@ class DataBase():
         '''
         Return dict of all column: type pairs in specified table.
         '''
-        if self.db_type == 'ACCESS':
-            conn, cursor = self.connection(also_cursor=True)
-            try:
-                return {col[3]: col[5].lower() for col in cursor.columns(table=tablename)}
-            except UnicodeDecodeError:
-                print(f'\nERROR - Unable to read columns for table: {tablename}.')
-                print('This may occur if using Access database with column descriptions populated.')
-                print('Try deleting the column descriptions.\n')
-                return {}
-        elif self.db_type == 'SQLITE':
-            conn, cursor = self.connection(also_cursor=True)
-            return {col[1]: col[2].lower() for col in cursor.execute(f"PRAGMA TABLE_INFO('{tablename}');").fetchall()}
-        else:
-            sql = f'SELECT * FROM {tablename} LIMIT 2;'
-            conn, cursor = self.connection(also_cursor=True)
-            data = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
-            conn.close()
-            if len(data) == 0:
-                print(f'No rows in {tablename}.  Please determine columns and types with another method.')
-                return {}
+        with self as cursor:
+            if self.db_type == 'ACCESS':
+                try:
+                    return {col[3]: col[5].lower() for col in cursor.columns(table=tablename)}
+                except UnicodeDecodeError:
+                    print(f'\nERROR - Unable to read columns for table: {tablename}.')
+                    print('This may occur if using Access database with column descriptions populated.')
+                    print('Try deleting the column descriptions.\n')
+                    return {}
+            elif self.db_type == 'SQLITE':
+                return {col[1]: col[2].lower() for col in cursor.execute(f"PRAGMA TABLE_INFO('{tablename}');").fetchall()}
             else:
-                return {key: type(value).__name__.lower() for key, value in data[0].items()}
+                sql = f'SELECT * FROM {tablename} LIMIT 2;'
+                data = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type)
+                if len(data) == 0:
+                    print(f'No rows in {tablename}.  Please determine columns and types with another method.')
+                    return {}
+                else:
+                    return {key: type(value).__name__.lower() for key, value in data[0].items()}
 
 
     def key_columns(self, tablename: str) -> list:
@@ -400,8 +402,7 @@ class DataBase():
         if not self.db_type == 'ACCESS':
             print('ERROR!  .key_columns is only currently implemented for Access databases.')
         with self as cursor:
-            key_cols = [row[8] for row in cursor.statistics(tablename) if row[5] and 'key' in row[5].lower()]
-        return key_cols
+            return [row[8] for row in cursor.statistics(tablename) if row[5] and 'key' in row[5].lower()]
 
 
     def create_table(self, tablename: str, columns_and_types: dict, force_overwrite: bool=False) -> None:
@@ -573,48 +574,47 @@ class DataBase():
             else:
                 return value
 
-        conn, cursor = self.connection(also_cursor=True)
-        if progressbar:
-            pbar = tqdm.tqdm(total=len(data))
-        original_data_len = len(data)
-        retry_attempts = 0
-        while len(data) > 0:
-            try:
-                if safe:
-                    for row in data[-100:]:
-                        cursor.execute(insert_sql + '(' + ','.join([f'{convert_to_sql(row[col])}' for col in columns]) + ');')
-                else:
-                    try:
-                        cursor.executemany(insert_many_sql, [tuple(row_dict[col] for col in columns) for row_dict in data[-100:]])
-                    except (pyodbc.IntegrityError, sqlite3.InterfaceError):
-                        # this section is just intended to help debug issues with input data by printing problematic data
-                        # pyodbc.IntegrityError may occur if null value provided for index/primary key column
-                        # sqlite3.InterfaceError may occur if an unsupported data type is provided
-                        for row_dict in data[-100:]:
-                            try:
-                                cursor.executemany(insert_many_sql, [tuple(row_dict[col] for col in columns)])
-                            except (pyodbc.IntegrityError, sqlite3.InterfaceError):
-                                print('\n\n\n' + '-'*50 + 'ERROR!  Triggering input row shown below:')
-                                for key, val in row_dict.items():
-                                    print(f'    {col.ljust(15)}   |   {val}')
-                                print('-'*50 + '\n')
-                                cursor.executemany(insert_many_sql, [tuple(row_dict[col] for col in columns)])  # call again to trigger exception messaging and exit
+        with self as cursor:
+            if progressbar:
+                pbar = tqdm.tqdm(total=len(data))
+            original_data_len = len(data)
+            retry_attempts = 0
+            while len(data) > 0:
+                try:
+                    if safe:
+                        for row in data[-100:]:
+                            cursor.execute(insert_sql + '(' + ','.join([f'{convert_to_sql(row[col])}' for col in columns]) + ');')
+                    else:
+                        try:
+                            cursor.executemany(insert_many_sql, [tuple(row_dict[col] for col in columns) for row_dict in data[-100:]])
+                        except (pyodbc.IntegrityError, sqlite3.InterfaceError):
+                            # this section is just intended to help debug issues with input data by printing problematic data
+                            # pyodbc.IntegrityError may occur if null value provided for index/primary key column
+                            # sqlite3.InterfaceError may occur if an unsupported data type is provided
+                            for row_dict in data[-100:]:
+                                try:
+                                    cursor.executemany(insert_many_sql, [tuple(row_dict[col] for col in columns)])
+                                except (pyodbc.IntegrityError, sqlite3.InterfaceError):
+                                    print('\n\n\n' + '-'*50 + 'ERROR!  Triggering input row shown below:')
+                                    for key, val in row_dict.items():
+                                        print(f'    {col.ljust(15)}   |   {val}')
+                                    print('-'*50 + '\n')
+                                    cursor.executemany(insert_many_sql, [tuple(row_dict[col] for col in columns)])  # call again to trigger exception messaging and exit
 
-                if progressbar:
-                    pbar.update(100 if len(data) >= 100 else len(data))
-                data = data[:-100]
-            except sqlite3.OperationalError as error:  # database is locked
-                if retry_attempts < 5:
-                    retry_attempts += 1
-                    print('Database locked?  Retrying...')
-                    time.sleep(random.random() / 10)
-                else:
-                    print(error)
-                    break
-        if progressbar:
-            pbar.close()
-        conn.commit()
-        conn.close()
+                    if progressbar:
+                        pbar.update(100 if len(data) >= 100 else len(data))
+                    data = data[:-100]
+                except sqlite3.OperationalError as error:  # database is locked
+                    if retry_attempts < 5:
+                        retry_attempts += 1
+                        print('Database locked?  Retrying...')
+                        time.sleep(random.random() / 10)
+                    else:
+                        print(error)
+                        break
+            if progressbar:
+                pbar.close()
+
         self._clear_pull_cache(tablename)  # clear cache for this table as want new table pull if something has been updated
         print(f'Data inserted in "{tablename}" -> {"{:,.0f}".format(original_data_len)} rows')
 
@@ -642,7 +642,7 @@ class DataBase():
         the interval at which the callback is called. (# of SQLite instructions)
         Basically, a larger "n" value reduces the number of callbacks.
 
-        cache_conn kwarg can be used (Access ONLY!) to cache the database connection between separate update calls
+        cache_conn kwarg can be used (in Access only, not used otherwise) to cache the database connection between separate update calls
         This greatly improves performance for many updates without having to otherwise manage the connection.
         '''
         # Abort update if match or update column does not exist in the table (may be misspelled or just missing)
@@ -680,6 +680,7 @@ class DataBase():
         else:
             cursor.execute(sql, (update_val, match_val))
         conn.commit()
+        # conn.close()
         self._clear_pull_cache(tablename)  # clear cache for this table as want new table pull if something's been updated
 
 
@@ -782,7 +783,10 @@ class DataBase():
         '''
         if tablename in self.table_names():
             with self as cursor:
-                cursor.execute(f'DELETE * FROM {tablename};')
+                if self.db_type == 'SQLITE':
+                    cursor.execute(f'DELETE FROM {tablename};')
+                else:
+                    cursor.execute(f'DELETE * FROM {tablename};')
             self._clear_pull_cache(tablename)  # clear cache for this table as table has been cleared
 
 
