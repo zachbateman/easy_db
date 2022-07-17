@@ -1,7 +1,7 @@
 '''
 Module containing easy_db DataBase class.
 '''
-from typing import Union, List
+from typing import Union, List, Set
 import sqlite3
 try:
     import pyodbc
@@ -339,6 +339,15 @@ class DataBase():
                 pbar.update(len(match_values) % 100)
 
         return data
+
+
+    def distinct_values(self, tablename: str, columnname: str) -> Set:
+        '''
+        Pull and return set of unique values in given column of given table.
+        '''
+        with self as cursor:
+            cursor.execute(f'SELECT DISTINCT {columnname} FROM {tablename};')
+            return set(tup[0] for tup in cursor.fetchall())
 
 
     @lru_cache(maxsize=1)
