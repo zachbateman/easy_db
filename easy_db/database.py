@@ -22,7 +22,7 @@ from . import util
 
 class DataBase():
 
-    def __init__(self, db_location_str: str='', create_if_none: bool=True) -> None:
+    def __init__(self, db_location_str: str='', create_if_none: bool=True):
         self.db_location_str = db_location_str
         self._pull_cache: dict = {}
         self._conn_cache = None
@@ -71,7 +71,7 @@ class DataBase():
 
     def _connection_sqlite(self, also_cursor: bool=False, create_if_none: bool=False, **kwargs):
         '''
-        Return a connection object to the Sqlite Database.
+        Return a connection object to the SQLite Database.
         '''
         db_file_exists = True if os.path.isfile(self.db_location_str) else False
         if db_file_exists or create_if_none:
@@ -219,7 +219,7 @@ class DataBase():
                 return None
 
 
-    def pull(self, tablename: str, columns='all', fresh=False, progress_handler=None) -> list:
+    def pull(self, tablename: str, columns='all', fresh=False, progress_handler=None, cache_conn: bool=False) -> list:
         '''
         "SELECT *" query for full table as specified from tablename.
         ALSO WORKS for an Access Select query named tablename!
@@ -260,8 +260,10 @@ class DataBase():
                     if not util.name_clean(name):
                         return []
 
+                conn, cursor = self.connection(also_cursor=True, cache_conn=cache_conn)
+
                 # ensure specified tablename is a valid table (or query possibly in Access)
-                if tablename not in self.table_names() + self.query_names():
+                if tablename not in self.table_names(existing_cursor=cursor) + self.query_names(existing_cursor=cursor):
                     print(f'Table or query "{tablename}" not found.  Pull aborted.')
                     return []
 
@@ -271,7 +273,6 @@ class DataBase():
                     columns = [columns]  # convert to list for a single user-provided column string
                 else:
                     sql = f'SELECT {", ".join(columns)} FROM "{tablename}";'
-                conn, cursor = self.connection(also_cursor=True)
 
                 if progress_handler is not None:
                     if self.db_type == 'SQLITE':  # progress_handler only currently working for sqlite
@@ -280,7 +281,8 @@ class DataBase():
                         print('progress_handler is only available for use with a SQLite database.')
 
                 self._pull_cache[requested_data_key] = util.list_of_dicts_from_query(cursor, sql, tablename, self.db_type, columns=columns if isinstance(columns, list) else [])
-                conn.close()
+                if not cache_conn:
+                    conn.close()
                 return self._pull_cache[requested_data_key]
 
 
@@ -351,29 +353,40 @@ class DataBase():
 
 
     @lru_cache(maxsize=1)
-    def table_names(self) -> list:
+    def table_names(self, existing_cursor=None) -> list:
         '''
         Return sorted list of all tables in the database.
         '''
-        with self as cursor:
+        if existing_cursor:
             if self.db_type == 'SQLITE':
-                tables = [tup[0] for tup in cursor.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()]
+                tables = [tup[0] for tup in existing_cursor.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()]
             elif self.db_type == 'ACCESS':
-                tables = [tup[2] for tup in cursor.tables() if tup[3] == 'TABLE']
+                tables = [tup[2] for tup in existing_cursor.tables() if tup[3] == 'TABLE']
             else:
-                tables = cursor.tables()
+                tables = existing_cursor.tables()
+        else:
+            with self as cursor:
+                if self.db_type == 'SQLITE':
+                    tables = [tup[0] for tup in cursor.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()]
+                elif self.db_type == 'ACCESS':
+                    tables = [tup[2] for tup in cursor.tables() if tup[3] == 'TABLE']
+                else:
+                    tables = cursor.tables()
         return sorted(tables)
 
 
     @lru_cache(maxsize=1)
-    def query_names(self) -> list:
+    def query_names(self, existing_cursor=None) -> list:
         '''
         Return sorted list of all queries in the database.
         Only works for Access Select queries.
         '''
         if self.db_type == 'ACCESS':
-            with self as cursor:
-                return sorted(tup[2] for tup in cursor.tables() if tup[3] == 'VIEW')
+            if existing_cursor:
+                return sorted(tup[2] for tup in existing_cursor.tables() if tup[3] == 'VIEW')
+            else:
+                with self as cursor:
+                    return sorted(tup[2] for tup in cursor.tables() if tup[3] == 'VIEW')
         else:
             return []
 
@@ -406,7 +419,7 @@ class DataBase():
 
     def key_columns(self, tablename: str) -> list:
         '''
-        Return the columns of the specified table that are primary keys.'
+        Return the columns of the specified table that are primary keys.
         '''
         if not self.db_type == 'ACCESS':
             print('ERROR!  .key_columns is only currently implemented for Access databases.')
@@ -419,7 +432,7 @@ class DataBase():
         Create a table in the database with name "tablename"
 
         Pass in a dictionary containing column names as keys and column types as values.
-        values can be tye actual type (like int, float, etc.) or strings of those same (like 'int', 'float', etc.)
+        values can be the actual type (like int, float, etc.) or strings of those same (like 'int', 'float', etc.)
 
         force_overwrite kwarg allows to overwrite existing table if present
         (by default will NOT overwrite/change existing table.)
@@ -490,7 +503,8 @@ class DataBase():
             return dups
 
 
-    def append(self, tablename: str, data: Union[List[dict], dict], create_table_if_needed: bool=True, safe=False, clean_column_names=False, robust: bool=True, progressbar: bool=None) -> None:
+    def append(self, tablename: str, data: Union[List[dict], dict], create_table_if_needed: bool=True, safe=False,
+               clean_column_names=False, robust: bool=True, progressbar: bool=None) -> None:
         '''
         Append rows of data to database table.
         Create the table in the database if it doesn't exist if create_table_if_needed is True
@@ -526,7 +540,8 @@ class DataBase():
         if tablename not in self.table_names() and create_table_if_needed:
             self.create_table(tablename, {key: type(value).__name__ for key, value in data[0].items()})
         elif tablename not in self.table_names() and not create_table_if_needed:
-            print(f'ERROR!  Table "{tablename}" does not exist in database!\nUse create_table_if_needed=True if you would like to create it.')
+            print(f'ERROR!  Table "{tablename}" does not exist in database!')
+            print('Use create_table_if_needed=True if you would like to create it.')
             return None
 
         if robust:
@@ -555,7 +570,8 @@ class DataBase():
             if dup_rows:
                 non_dup_data = [d for d in data if tuple(d[key] for key in key_cols) not in dup_rows]
                 skip_count = len(data) - len(non_dup_data)
-                print(f"\n{skip_count} row{'s were' if skip_count > 1 else ' was'} skipped in .append due to being primary key duplicates\n  of rows that already exist in table: {tablename}")
+                print(f"\n{skip_count} row{'s were' if skip_count > 1 else ' was'} skipped in .append due to being primary key duplicates")
+                print(f"  of rows that already exist in table: {tablename}")
                 if not non_dup_data:
                     print('No remaining data to append.')
                     return
@@ -689,8 +705,9 @@ class DataBase():
         else:
             cursor.execute(sql, (update_val, match_val))
         conn.commit()
-        # conn.close()
-        self._clear_pull_cache(tablename)  # clear cache for this table as want new table pull if something's been updated
+        if not cache_conn:
+            conn.close()
+        self._clear_pull_cache(tablename)  # clear cache for this table as want new table pull if something has been updated
 
 
     def add_column(self, tablename: str, new_col: str, new_type='str') -> None:

@@ -202,6 +202,13 @@ class TestAccess(unittest.TestCase):
 
         self.db.append('TEST', {'ID': 'TKALSKJDF', 'STATE': None, 'ENTITY_NAME': 'ENTITY 2', 'SIZE': float('nan'),  'WEIGHT': None}, safe=True, robust=True)
 
+    def test_pull(self):
+        data = [{'c1': 1, 'c2': 2, 'c3': 3}, {'c1': 11, 'c2': 22, 'c3': 33}]
+        self.db.drop_table('UPDATE_TEST')
+        self.db.append('UPDATE_TEST', data)
+        self.assertTrue(data == self.db.pull('UPDATE_TEST', cache_conn=True))
+        self.db.drop_table('UPDATE_TEST')
+
     def test_update(self):
         data = [{'c1': 1, 'c2': 2, 'c3': 3}, {'c1': 11, 'c2': 22, 'c3': 33}]
         self.db.drop_table('UPDATE_TEST')

@@ -12,7 +12,7 @@ from datetime import datetime
 
 
 
-def type_map(db_type) -> dict:
+def type_map(db_type: str) -> dict:
     '''
     Return dict of Python types as keys and appropriate
     database types as values based on the provided db_type.
