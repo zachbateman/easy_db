@@ -621,7 +621,7 @@ class DataBase():
                                     cursor.executemany(insert_many_sql, [tuple(row_dict[col] for col in columns)])
                                 except (pyodbc.IntegrityError, sqlite3.InterfaceError):
                                     print('\n\n\n' + '-'*50 + 'ERROR!  Triggering input row shown below:')
-                                    for key, val in row_dict.items():
+                                    for col, val in row_dict.items():
                                         print(f'    {col.ljust(15)}   |   {val}')
                                     print('-'*50 + '\n')
                                     cursor.executemany(insert_many_sql, [tuple(row_dict[col] for col in columns)])  # call again to trigger exception messaging and exit
