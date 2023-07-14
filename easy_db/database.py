@@ -15,6 +15,7 @@ from functools import lru_cache
 import tqdm
 from datetime import datetime
 from . import util
+from .db_types import DBType
 # hidden import below: win32com (pip install pywin32) only needed for .compact_db if using Access db.
 
 
@@ -28,7 +29,7 @@ class DataBase():
         self._conn_cache = None
 
         self.db_type = self._find_db_type()
-        if self.db_type == 'ACCESS':
+        if self.db_type == DBType.ACCESS:
             self.connection = self._connection_access
             try:
                 self.connection()
@@ -37,20 +38,20 @@ class DataBase():
                 print(f'\nERROR with pyodbc!  Unable to connect to Access Database: {self.db_location_str}')
                 print('Try checking to ensure consistent 64 or 32 bitness between your Python install and your Access driver.')
                 print('If all else fails, try uninstalling and then reinstalling your Microsoft Access driver(s)...\n\n')
-        elif self.db_type == 'SQL SERVER':
-            self.connection = self._connection_sql_server
-        elif self.db_type == 'SQLITE':
+        # elif self.db_type == 'SQL SERVER':
+        #     self.connection = self._connection_sql_server
+        elif self.db_type == DBType.SQLITE:
             self.connection = self._connection_sqlite
         elif db_location_str[-3:].lower() == '.db' and create_if_none:
             self.connection = self._connection_sqlite
             self.connection(create_if_none=True)
-            self.db_type = 'SQLITE'
+            self.db_type = DBType.SQLITE
         else:
             print(f'Error: database {db_location_str} not found.')
 
 
 
-    def _find_db_type(self) -> str:
+    def _find_db_type(self) -> DBType:
         '''
         Figure out what kind of database is being used.
         '''
@@ -60,13 +61,14 @@ class DataBase():
             return self._find_db_type()
 
         if '.accdb' in self.db_location_str.lower() or '.mdb' in self.db_location_str.lower():
-            return 'ACCESS'
-        elif 'dsn' in self.db_location_str.lower():
-            return 'SQL SERVER'
+            return DBType.ACCESS
+        # elif 'dsn' in self.db_location_str.lower():
+        #     return 'SQL SERVER'
         elif util.check_if_file_is_sqlite(self.db_location_str):
-            return 'SQLITE'
+            return DBType.SQLITE
         else:
-            return 'Database not recognized!'
+            print('Database not recognized!')
+            return DBType.UNKNOWN
 
 
     def _connection_sqlite(self, also_cursor: bool=False, create_if_none: bool=False, **kwargs):
@@ -162,7 +164,7 @@ class DataBase():
     @property
     def size(self):
         '''Return size of database in GB'''
-        if self.db_type in ['SQLITE', 'ACCESS']:
+        if self.db_type in [DBType.SQLITE, DBType.ACCESS]:
             return round(os.path.getsize(self.db_location_str) / 10 ** 9, 6)
         else:
             print('db.size only works for SQLite and Access databases!')
@@ -177,11 +179,11 @@ class DataBase():
         Previous sqlite3 bug requiring connection kwarg
         isolation_level=None appears to be fixed.
         '''
-        if self.db_type == 'SQLITE':
+        if self.db_type == DBType.SQLITE:
             conn = self.connection()
             conn.execute('VACUUM')
             conn.close()
-        elif self.db_type == 'ACCESS':
+        elif self.db_type == DBType.ACCESS:
             try:
                 import win32com.client
             except ModuleNotFoundError:
@@ -197,7 +199,7 @@ class DataBase():
             else:
                 print('Compact & Repair FAILED')
                 os.remove(dest_path)
-            access_app = None
+            del access_app
         else:
             print('compact_db() only implemented for SQLite and Access databases.')
             print(f'Current database is: {self.db_type}')
@@ -275,7 +277,7 @@ class DataBase():
                     sql = f'SELECT {", ".join(columns)} FROM "{tablename}";'
 
                 if progress_handler is not None:
-                    if self.db_type == 'SQLITE':  # progress_handler only currently working for sqlite
+                    if self.db_type == DBType.SQLITE:  # progress_handler only currently working for sqlite
                         conn.set_progress_handler(*progress_handler if type(progress_handler) is tuple else (progress_handler, 100))  # Can use to track progress
                     else:
                         print('progress_handler is only available for use with a SQLite database.')
@@ -358,17 +360,17 @@ class DataBase():
         Return sorted list of all tables in the database.
         '''
         if existing_cursor:
-            if self.db_type == 'SQLITE':
+            if self.db_type == DBType.SQLITE:
                 tables = [tup[0] for tup in existing_cursor.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()]
-            elif self.db_type == 'ACCESS':
+            elif self.db_type == DBType.ACCESS:
                 tables = [tup[2] for tup in existing_cursor.tables() if tup[3] == 'TABLE']
             else:
                 tables = existing_cursor.tables()
         else:
             with self as cursor:
-                if self.db_type == 'SQLITE':
+                if self.db_type == DBType.SQLITE:
                     tables = [tup[0] for tup in cursor.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()]
-                elif self.db_type == 'ACCESS':
+                elif self.db_type == DBType.ACCESS:
                     tables = [tup[2] for tup in cursor.tables() if tup[3] == 'TABLE']
                 else:
                     tables = cursor.tables()
@@ -381,7 +383,7 @@ class DataBase():
         Return sorted list of all queries in the database.
         Only works for Access Select queries.
         '''
-        if self.db_type == 'ACCESS':
+        if self.db_type == DBType.ACCESS:
             if existing_cursor:
                 return sorted(tup[2] for tup in existing_cursor.tables() if tup[3] == 'VIEW')
             else:
@@ -397,7 +399,7 @@ class DataBase():
         Return dict of all column: type pairs in specified table.
         '''
         with self as cursor:
-            if self.db_type == 'ACCESS':
+            if self.db_type == DBType.ACCESS:
                 try:
                     return {col[3]: col[5].lower() for col in cursor.columns(table=tablename)}
                 except UnicodeDecodeError:
@@ -405,7 +407,7 @@ class DataBase():
                     print('This may occur if using Access database with column descriptions populated.')
                     print('Try deleting the column descriptions.\n')
                     return {}
-            elif self.db_type == 'SQLITE':
+            elif self.db_type == DBType.SQLITE:
                 return {col[1]: col[2].lower() for col in cursor.execute(f"PRAGMA TABLE_INFO('{tablename}');").fetchall()}
             else:
                 sql = f'SELECT * FROM {tablename} LIMIT 2;'
@@ -421,7 +423,7 @@ class DataBase():
         '''
         Return the columns of the specified table that are primary keys.
         '''
-        if not self.db_type == 'ACCESS':
+        if not self.db_type == DBType.ACCESS:
             print('ERROR!  .key_columns is only currently implemented for Access databases.')
         with self as cursor:
             return [row[8] for row in cursor.statistics(tablename) if row[5] and 'key' in row[5].lower()]
@@ -452,9 +454,9 @@ class DataBase():
             print('-> Please submit a pull request adding these types to the .create_table type_maps!\n')
             return
 
-        if self.db_type == 'ACCESS':
+        if self.db_type == DBType.ACCESS:
             sql = f"CREATE TABLE {tablename}({column_types});"
-        elif self.db_type == 'SQLITE':
+        elif self.db_type == DBType.SQLITE:
             sql = f"CREATE TABLE '{tablename}'({column_types});"
 
         if tablename in self.table_names() and not force_overwrite:
@@ -480,7 +482,10 @@ class DataBase():
             self.table_names.cache_clear()  # need to repull table names as just created a new one
             self.columns_and_types.cache_clear()
         else:
-            print(error)
+            try:
+                print(error)
+            except Exception:
+                pass
             print(f'\nUnable to create table "{tablename}"\nPerhaps the database is locked?!')
 
 
@@ -557,14 +562,14 @@ class DataBase():
                 print('Try setting robust=True and/or /n  set clean_column_names=True to replace " " and "/" with underscores in data keys.')
                 return
 
-        if self.db_type == 'SQLITE':
+        if self.db_type == DBType.SQLITE:
             insert_sql = f"INSERT INTO '{tablename}' ({','.join([f'[{col}]' for col in columns])}) VALUES "
         else:
             insert_sql = f"INSERT INTO [{tablename}] ({', '.join([f'[{col}]' for col in columns])}) VALUES "
         insert_many_sql = insert_sql + f"({', '.join(['?' for _ in range(len(columns))])});"
 
         # Check for potential duplicate (key) entries if Access to avoid pyodbc error and crash of whole append.
-        if self.db_type == 'ACCESS' and robust:
+        if self.db_type == DBType.ACCESS and robust:
             dup_rows = self._check_potential_duplicates(tablename, data)
             key_cols = self.key_columns(tablename)
             if dup_rows:
@@ -578,8 +583,9 @@ class DataBase():
                 print(f'The remaining {len(non_dup_data)} rows are still being appended.\n')
                 data = non_dup_data
 
-        is_sqlite = True if self.db_type == 'SQLITE' else False
-        is_access = True if self.db_type == 'ACCESS' else False
+        # Local variables for speed in hot convert_to_sql function below
+        is_sqlite = True if self.db_type == DBType.SQLITE else False
+        is_access = True if self.db_type == DBType.ACCESS else False
 
         math_isnan = math.isnan  # just assigning here so don't need dot lookup in below heavily-used function
         def convert_to_sql(value):
@@ -680,7 +686,7 @@ class DataBase():
         conn, cursor = self.connection(also_cursor=True, cache_conn=cache_conn)
 
         if progress_handler is not None:
-            if self.db_type == 'SQLITE':  # progress_handler only currently working for sqlite
+            if self.db_type == DBType.SQLITE:  # progress_handler only currently working for sqlite
                 conn.set_progress_handler(*progress_handler if type(progress_handler) is tuple else (progress_handler, 100))  # Can use to track progress
             else:
                 print('progress_handler is only available for use with a SQLite database.')
@@ -716,7 +722,7 @@ class DataBase():
             print(f'Column {new_col} is already in {tablename}!')
             return
         if new_type == 'str':
-            new_type = 'varchar(255)' if self.db_type == 'ACCESS' else 'TEXT'
+            new_type = 'varchar(255)' if self.db_type == DBType.ACCESS else 'TEXT'
         with self as cursor:
             cursor.execute(f'ALTER TABLE {tablename} ADD COLUMN {new_col} {new_type};')
         print(f'Column {new_col} added to {tablename}.')
@@ -744,7 +750,7 @@ class DataBase():
         Duplicates are determined by grouping based on the grouping_columns kwarg (provide iterable).
         If grouping_columns is not provided, all columns are used (rows must match perfectly).
         '''
-        if self.db_type not in ['SQLITE', 'ACCESS']:
+        if self.db_type not in [DBType.SQLITE, DBType.ACCESS]:
             print('.delete_duplicates currently only implemented for SQLite and Access databases.')
             return
 
@@ -753,11 +759,11 @@ class DataBase():
         if grouping_columns is None:
             grouping_columns = sorted(self.columns_and_types(tablename).keys())
 
-        if self.db_type == 'SQLITE':
+        if self.db_type == DBType.SQLITE:
             with self as cursor:
                 cursor.execute(f'DELETE FROM {tablename} WHERE rowid NOT IN (SELECT max(rowid) FROM {tablename} GROUP BY {", ".join(grouping_columns)})')
 
-        elif self.db_type == 'ACCESS':
+        elif self.db_type == DBType.ACCESS:
             # TODO:  Think some sort of SQL can accomplish dup deletion better than in Python... haven't figured it out yet
             # with self as cursor:
                 # cursor.execute(f'DELETE * FROM {tablename} WHERE rowid NOT IN (SELECT max(rowid) FROM {tablename} GROUP BY {", ".join(grouping_columns)})')
@@ -793,7 +799,7 @@ class DataBase():
 
 
     def create_index(self, tablename: str, column: str, index_name: str='', unique: bool=False) -> None:
-        if self.db_type == 'SQLITE':
+        if self.db_type == DBType.SQLITE:
             index_name = column if index_name == '' else index_name  # use column name if not provided
             with self as cursor:
                 cursor.execute(f'CREATE {"UNIQUE " if unique else ""}INDEX {index_name} on {tablename}({column});')
@@ -809,7 +815,7 @@ class DataBase():
         '''
         if tablename in self.table_names():
             with self as cursor:
-                if self.db_type == 'SQLITE':
+                if self.db_type == DBType.SQLITE:
                     cursor.execute(f'DELETE FROM {tablename};')
                 else:
                     cursor.execute(f'DELETE * FROM {tablename};')
@@ -824,7 +830,7 @@ class DataBase():
             print(f'Table "{tablename}" does not exist.  Table drop aborted.')
             return
 
-        if self.db_type == 'SQLITE':
+        if self.db_type == DBType.SQLITE:
             t0, drop_complete = time.time(), False
             with self as cursor:
                 while time.time() - t0 < 10:
@@ -839,7 +845,7 @@ class DataBase():
                 print(f'Table "{tablename}" deleted.')
             else:
                 print(f'Unable to drop table "{tablename}" as the database is locked!')
-        elif self.db_type == 'ACCESS':
+        elif self.db_type == DBType.ACCESS:
             with self as cursor:
                 cursor.execute(f'DROP TABLE {tablename};')
             print(f'Table {tablename} deleted.')

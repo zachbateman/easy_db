@@ -9,15 +9,16 @@ except Exception:
     pass
 from typing import List, Dict, Any
 from datetime import datetime
+from .db_types import DBType
 
 
 
-def type_map(db_type: str) -> dict:
+def type_map(db_type: DBType) -> dict:
     '''
     Return dict of Python types as keys and appropriate
     database types as values based on the provided db_type.
     '''
-    if db_type == 'ACCESS':
+    if db_type == DBType.ACCESS:
         return {float: 'double',
                     'float': 'double',
                     'double': 'double',
@@ -39,7 +40,7 @@ def type_map(db_type: str) -> dict:
                     None: 'varchar(255)',
                     'nonetype': 'varchar(255)',
                     }
-    elif db_type == 'SQLITE':
+    elif db_type == DBType.SQLITE:
         return {float: 'REAL',
                     'float': 'REAL',
                     'double': 'REAL',
@@ -86,7 +87,7 @@ def check_if_file_is_sqlite(filename: str) -> bool:
         return False
 
 
-def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str, parameters: list=[], columns: list=[]) -> List[Dict[str, Any]]:
+def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: DBType, parameters: list=[], columns: list=[]) -> List[Dict[str, Any]]:
     '''
     Query db using cursor, supplied sql, and tablename.
     Return list of dicts for query result.
@@ -103,10 +104,10 @@ def list_of_dicts_from_query(cursor, sql: str, tablename: str, db_type: str, par
         return []
 
     if not columns:
-        if db_type == 'SQLITE':
+        if db_type == DBType.SQLITE:
             columns = [description[0] for description in cursor.description]
-        elif db_type == 'SQL SERVER':
-            columns = [column[0] for column in cursor.description]
+        # elif db_type == 'SQL SERVER':
+        #     columns = [column[0] for column in cursor.description]
         else:
             try:
                 columns = [row.column_name for row in cursor.columns(table=tablename)]
@@ -160,7 +161,7 @@ def clean_column_name(col_name: str) -> str:
     return col_name
 
 
-def clean_data(data, columns_and_types, db_type) -> List[dict]:
+def clean_data(data, columns_and_types, db_type: DBType) -> List[dict]:
     '''
     Best effort to clean list of dicts representing database table rows to handle mismatched types,
     null values, and missing columns.

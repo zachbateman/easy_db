@@ -2,7 +2,7 @@ import unittest
 import sys
 sys.path.insert(1, '..')
 import easy_db
-from datetime import datetime
+from easy_db.db_types import DBType
 
 
 class TestSQLite(unittest.TestCase):
@@ -12,7 +12,7 @@ class TestSQLite(unittest.TestCase):
 
     def test_dbtype(self):
         print(self.db.db_type)
-        self.assertTrue(self.db.db_type == 'SQLITE')
+        self.assertTrue(self.db.db_type == DBType.SQLITE)
 
     def test_size(self):
         self.assertTrue(self.db.size > 0)
