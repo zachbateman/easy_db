@@ -43,11 +43,15 @@ class DataBase():
         elif self.db_type == DBType.SQLITE:
             self.connection = self._connection_sqlite
         elif db_location_str[-3:].lower() == '.db' and create_if_none:
+            print(f'File not found.  Creating database: {self.db_location_str}')
             self.connection = self._connection_sqlite
             self.connection(create_if_none=True)
             self.db_type = DBType.SQLITE
         else:
-            print(f'Error: database {db_location_str} not found.')
+            if not os.path.isfile(self.db_location_str):
+                print(f'Error: database {db_location_str} not found.')
+            else:
+                print(f'Database not recognized!')
 
 
 
@@ -67,7 +71,6 @@ class DataBase():
         elif util.check_if_file_is_sqlite(self.db_location_str):
             return DBType.SQLITE
         else:
-            print('Database not recognized!')
             return DBType.UNKNOWN
 
 
