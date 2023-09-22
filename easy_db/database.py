@@ -801,11 +801,22 @@ class DataBase():
         self._clear_pull_cache(tablename)  # clear cache for this table as want new table pull if something has been updated
 
 
-    def create_index(self, tablename: str, column: str, index_name: str='', unique: bool=False) -> None:
+    def create_index(self, tablename: str, column: str | list[str], index_name: str='', unique: bool=False) -> None:
+        '''
+        Generate an index using the specified column(s) in the given table.
+        Can provide a specific index_name, but otherwise will auto-generate one.
+        '''
         if self.db_type == DBType.SQLITE:
-            index_name = column if index_name == '' else index_name  # use column name if not provided
+            if isinstance(column, str):
+                index_name = f'idx_{tablename}_{column}' if index_name == '' else index_name  # use column name if not provided
+                column_sql = column
+            else: # if column is list of columns, use generic name as index name
+                index_name = f'idx_{tablename}_{"_".join(column)}' if index_name == '' else index_name
+                column_sql = ', '.join([f'"{col}"' for col in column])
+
             with self as cursor:
-                cursor.execute(f'CREATE {"UNIQUE " if unique else ""}INDEX {index_name} on {tablename}({column});')
+                cursor.execute(f'CREATE {"UNIQUE " if unique else ""}INDEX {index_name} on {tablename}({column_sql});')
+
             self.columns_and_types.cache_clear()
         else:
             print('.create_index is currently only implemented for SQLite databases.')

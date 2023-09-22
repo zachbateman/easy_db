@@ -4,6 +4,11 @@ easy_db is a high-level Python library designed to simplify working with databas
 types of databases while providing simple methods for common tasks.  The underlying database connection and cursor can be used when more
 precise control is desired.
 
+Currently Supported Databases:
+ - SQLite
+ - Access
+ - ... (Feel free to submit a PR setting up another database type!)
+
 # Goals
 
  - Make common database tasks simple and easy

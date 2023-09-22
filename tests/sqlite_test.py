@@ -66,6 +66,19 @@ class TestSQLite(unittest.TestCase):
         self.db.drop_table('TEST_TABLE_CREATION')
         self.assertTrue(True)
 
+    def test_index_creation(self):
+        # Test creating an index from one column
+        self.db.create_table('TEST_TABLE_INDEX', {'col_1': str, 'col_2': str, 'col_3': float})
+        self.db.append('TEST_TABLE_INDEX', [{'col_1': 'row_A', 'col_2': 1.5, 'col_3': 3.7}, {'col_1': 'row_B', 'col_2': 3.7, 'col_3': 1.5}])
+        self.db.create_index('TEST_TABLE_INDEX', 'col_1')
+        self.db.drop_table('TEST_TABLE_INDEX')
+        # Test creating an index from multiple columns
+        self.db.create_table('TEST_TABLE_INDEX', {'col_1': str, 'col_2': str, 'col_3': float})
+        self.db.append('TEST_TABLE_INDEX', [{'col_1': 'row_A', 'col_2': 1.5, 'col_3': 3.7}, {'col_1': 'row_B', 'col_2': 3.7, 'col_3': 1.5}])
+        self.db.create_index('TEST_TABLE_INDEX', ['col_1', 'col_2'])
+        self.db.drop_table('TEST_TABLE_INDEX')
+        self.assertTrue(True)
+
     def test_table_creation_bad_types(self):
         self.db.create_table('BAD_TYPES', {'col_1': str, 'col_2': str, 'col_3': 'bad_type', 'col_3': tuple()})
         self.assertTrue('BAD_TYPES' not in self.db.table_names())
