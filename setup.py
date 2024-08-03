@@ -13,7 +13,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/zachbateman/easy_db.git',
-    download_url='https://github.com/zachbateman/easy_db/archive/v_0.10.0.tar.gz',
+    download_url='https://github.com/zachbateman/easy_db/archive/v_0.10.1.tar.gz',
     keywords=['DATABASE', 'SIMPLE', 'EASY'],
     install_requires=['pyodbc', 'tqdm'],
     classifiers=['Development Status :: 4 - Beta',
